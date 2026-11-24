@@ -1,0 +1,6 @@
+{
+  "uuid": "ctrlboard-keyboard@ctrlboard",
+  "name": "Ctrlboard Keyboard Bridge",
+  "description": "Lets Ctrlboard select an already configured GNOME input source.",
+  "shell-version": ["45", "46", "47", "48", "49", "50"]
+}

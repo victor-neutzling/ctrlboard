@@ -1,0 +1,151 @@
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: var(--panel-gap);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.deck-screen {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.app-card {
+  position: relative;
+  min-height: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  background: linear-gradient(
+    150deg,
+    rgba(53, 65, 83, 0.75),
+    rgba(27, 34, 45, 0.94) 55%,
+    rgba(20, 26, 35, 0.98)
+  );
+  box-shadow:
+    0 10px 20px #05080d4d,
+    inset 0 1px #ffffff1d,
+    inset 0 -2px 4px #0005;
+  padding: var(--panel-padding);
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s;
+  touch-action: manipulation;
+}
+.app-card,
+.controls-screen button:not(.safety-toggle) {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.button-ripple {
+  position: absolute;
+  z-index: 2;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  background: radial-gradient(
+    circle,
+    rgba(231, 245, 255, 0.19) 0%,
+    rgba(178, 220, 255, 0.12) 46%,
+    rgba(137, 198, 255, 0.05) 68%,
+    transparent 76%
+  );
+  border: 1px solid rgba(218, 240, 255, 0.3);
+  box-shadow:
+    inset 0 0 18px rgba(215, 239, 255, 0.1),
+    0 0 9px rgba(135, 202, 255, 0.16);
+  backdrop-filter: blur(1px);
+  pointer-events: none;
+  animation: button-ripple-out 780ms cubic-bezier(0.16, 0.7, 0.24, 1) forwards;
+}
+@keyframes button-ripple-out {
+  0% {
+    transform: translate(-50%, -50%) scale(0.035);
+    opacity: 0;
+  }
+  16% {
+    opacity: 0.62;
+  }
+  72% {
+    opacity: 0.25;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.08);
+    opacity: 0;
+  }
+}
+.theme-light .app-card {
+  border-color: var(--panel-border);
+  background: var(--panel-light-background);
+  box-shadow: var(--panel-light-shadow);
+  color: #263344;
+}
+.theme-light .app-card:active {
+  background: linear-gradient(155deg, #e5edf5, #f7f9fc);
+  box-shadow:
+    inset 0 4px 10px #8796a844,
+    0 1px 2px #fff;
+}
+.app-card:active {
+  transform: translateY(2px) scale(0.985);
+  box-shadow:
+    inset 0 4px 10px #05080d88,
+    0 1px 2px #ffffff18;
+}
+.app-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 17px;
+  display: grid;
+  place-items: center;
+  font:
+    700 37px Manrope,
+    sans-serif;
+  margin-bottom: 7px;
+  box-shadow:
+    inset 0 1px 1px #ffffff58,
+    0 5px 12px #0004;
+  text-shadow: 0 2px 5px #0005;
+}
+.firefox {
+  color: #ffbd5d;
+  background: radial-gradient(circle at 30% 25%, #ffd360, #f45c35 58%, #944ad9);
+}
+.discord {
+  color: #f0f1ff;
+  background: linear-gradient(145deg, #909dff, #4c56ba);
+}
+.spotify {
+  color: #032515;
+  background: linear-gradient(145deg, #45e394, #18ad68);
+}
+.steam {
+  color: #dfe8fa;
+  background: linear-gradient(145deg, #486487, #15243b);
+}
+.vscode {
+  color: #c8efff;
+  background: linear-gradient(145deg, #41bfff, #1167b4);
+}
+.files {
+  color: #ecf9ff;
+  background: linear-gradient(145deg, #a1dafa, #3688dc);
+}
+.app-name {
+  font:
+    700 15px Manrope,
+    sans-serif;
+}
+.theme-light .app-name {
+  color: #263344;
+}

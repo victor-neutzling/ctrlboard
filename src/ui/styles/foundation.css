@@ -1,0 +1,159 @@
+:root {
+  font-family: "DM Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+  color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+  font-size: 14px;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 320px;
+  background: #10141b;
+}
+button,
+input,
+select {
+  font: inherit;
+}
+button {
+  color: inherit;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid #5fbaff;
+  outline-offset: 3px;
+}
+.app-shell {
+  --page-inset: 18px;
+  --panel-gap: 12px;
+  --panel-padding: 12px;
+  --panel-radius: 14px;
+  --panel-border: rgba(177, 199, 231, 0.17);
+  --text: #e9edf3;
+  --muted: #858e9d;
+  --faint: #626d7d;
+  --surface: #1b222d;
+  --surface-hi: #232c39;
+  --surface-low: #151b24;
+  --line: rgba(197, 213, 236, 0.1);
+  --accent: #55b7fa;
+  --accent-glow: rgba(61, 160, 255, 0.32);
+  --dial-tick: #79899d;
+  --dial-tick-major: #d2dce8;
+  --dial-number: #d1dae5;
+  --control-icon-hi: #344255;
+  --control-icon: #222b39;
+  width: 100vw;
+  height: 100vh;
+  min-height: 0;
+  background:
+    radial-gradient(
+      ellipse at 76% -22%,
+      rgba(76, 103, 148, 0.17),
+      transparent 42%
+    ),
+    #11151d;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-size: 14px;
+  transition:
+    background 0.3s,
+    color 0.3s;
+}
+.theme-light {
+  --panel-border: #aab8ca70;
+  --panel-light-background: linear-gradient(145deg, #fff, #edf2f8);
+  --panel-light-shadow: 0 7px 15px #56678220, inset 0 1px #fff;
+  color-scheme: light;
+  --text: #252d3a;
+  --muted: #7a8593;
+  --faint: #a1a9b5;
+  --surface: #f6f8fb;
+  --surface-hi: #fff;
+  --surface-low: #e9edf3;
+  --line: rgba(39, 56, 79, 0.12);
+  --accent: #168de1;
+  --accent-glow: rgba(61, 160, 255, 0.2);
+  --dial-tick: #7d8a99;
+  --dial-tick-major: #435266;
+  --dial-number: #3a4858;
+  --control-icon-hi: #ffffff;
+  --control-icon: #e3e9f0;
+  background:
+    radial-gradient(
+      ellipse at 76% -22%,
+      rgba(101, 163, 223, 0.18),
+      transparent 42%
+    ),
+    #e8edf4;
+}
+.gauge-status {
+  font-family: "DM Mono", monospace;
+  letter-spacing: 0.65px;
+}
+.screen-content {
+  --screen-width: calc(100vw - var(--page-inset) - var(--page-inset));
+  --screen-page-width: calc(
+    var(--screen-width) - var(--panel-gap) - var(--panel-gap) -
+      var(--panel-gap) - var(--panel-gap)
+  );
+  --screen-step: calc(var(--screen-page-width) + var(--panel-gap));
+  width: 100%;
+  min-height: 0;
+  padding: var(--page-inset);
+  margin: 0 auto;
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  touch-action: pan-y;
+  user-select: none;
+}
+.screen-track {
+  display: flex;
+  width: calc(
+    var(--screen-page-width) + var(--screen-page-width) +
+      var(--screen-page-width) + var(--panel-gap) + var(--panel-gap)
+  );
+  height: 100%;
+  min-height: 100%;
+  gap: var(--panel-gap);
+  transition: transform 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
+}
+.screen-track[data-screen="controls"] {
+  transform: translate3d(calc(var(--panel-gap) + var(--panel-gap)), 0, 0);
+}
+.screen-track[data-screen="deck"] {
+  transform: translate3d(
+    calc(var(--panel-gap) + var(--panel-gap) - var(--screen-step)),
+    0,
+    0
+  );
+}
+.screen-track[data-screen="gauges"] {
+  transform: translate3d(
+    calc(
+      var(--panel-gap) + var(--panel-gap) - var(--screen-step) -
+        var(--screen-step)
+    ),
+    0,
+    0
+  );
+}
+.screen-page {
+  flex: 0 0 var(--screen-page-width);
+  width: var(--screen-page-width);
+  height: 100%;
+  min-height: 100%;
+  min-width: 0;
+}

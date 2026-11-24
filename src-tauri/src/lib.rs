@@ -1,6 +1,8 @@
 use serde::Serialize;
 use std::{fs, path::Path};
 
+mod system_controls;
+
 #[derive(Serialize)]
 struct Metrics {
     cpu_percent: Option<f64>,
@@ -226,27 +228,43 @@ fn launch_application(desktop_id: String) -> Result<(), String> {
         .map_err(|error| format!("Could not launch application: {error}"))
 }
 
-#[tauri::command]
-fn run_system_action(action: String) -> Result<(), String> {
-    let session_id = || {
-        std::env::var("XDG_SESSION_ID")
-            .map_err(|_| "Could not determine the current desktop session".to_owned())
-            .and_then(|id| {
-                if !id.is_empty()
-                    && id
-                        .chars()
-                        .all(|character| character.is_ascii_alphanumeric() || character == '-')
-                {
-                    Ok(id)
-                } else {
-                    Err("Invalid desktop session id".to_owned())
-                }
-            })
-    };
+fn is_valid_session_id(id: &str) -> bool {
+    !id.is_empty()
+        && id
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || character == '-')
+}
 
+fn current_session_id() -> Result<String, String> {
+    let loginctl = std::process::Command::new("loginctl")
+        .args(["show-session", "auto", "--property=Id", "--value"])
+        .output();
+    if let Ok(output) = loginctl {
+        let id = String::from_utf8_lossy(&output.stdout).trim().to_owned();
+        if output.status.success() && is_valid_session_id(&id) {
+            return Ok(id);
+        }
+    }
+
+    if let Ok(id) = std::env::var("XDG_SESSION_ID") {
+        if is_valid_session_id(&id) {
+            return Ok(id);
+        }
+    }
+
+    Err("Could not determine the current desktop session from logind".to_owned())
+}
+
+fn run_system_action_blocking(action: String) -> Result<(), String> {
     let (program, arguments): (&str, Vec<String>) = match action.as_str() {
-        "lock" => ("loginctl", vec!["lock-session".into(), session_id()?]),
-        "logout" => ("loginctl", vec!["terminate-session".into(), session_id()?]),
+        "lock" => (
+            "loginctl",
+            vec!["lock-session".into(), current_session_id()?],
+        ),
+        "logout" => (
+            "loginctl",
+            vec!["terminate-session".into(), current_session_id()?],
+        ),
         "shutdown" => ("systemctl", vec!["poweroff".into()]),
         "restart" => ("systemctl", vec!["reboot".into()]),
         _ => return Err("Unsupported system action".into()),
@@ -268,6 +286,13 @@ fn run_system_action(action: String) -> Result<(), String> {
     }
 }
 
+#[tauri::command]
+async fn run_system_action(action: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || run_system_action_blocking(action))
+        .await
+        .map_err(|error| format!("System action task failed: {error}"))?
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -275,7 +300,16 @@ pub fn run() {
             read_metrics,
             list_applications,
             launch_application,
-            run_system_action
+            run_system_action,
+            system_controls::read_system_controls,
+            system_controls::set_audio_volume,
+            system_controls::set_audio_muted,
+            system_controls::read_application_volumes,
+            system_controls::set_application_volume,
+            system_controls::open_system_settings,
+            system_controls::set_display_brightness,
+            system_controls::set_default_audio_output,
+            system_controls::set_keyboard_layout
         ])
         .run(tauri::generate_context!())
         .expect("error while running Ctrlboard");

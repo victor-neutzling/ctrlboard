@@ -1,0 +1,291 @@
+.gauge-grid {
+  display: grid;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+  gap: var(--panel-gap);
+}
+.sparkline-grid {
+  display: grid;
+  width: 100%;
+  flex: 0 0 29%;
+  min-height: 132px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--panel-gap);
+}
+.instruments-screen {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--panel-gap);
+}
+.gauge-card {
+  --gauge-accent: #5bbcff;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  padding: var(--panel-padding);
+  border-radius: var(--panel-radius);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-self: center;
+  background: linear-gradient(
+    145deg,
+    rgba(53, 65, 81, 0.64),
+    rgba(28, 35, 46, 0.92) 55%,
+    rgba(20, 26, 35, 0.98)
+  );
+  border: 1px solid var(--panel-border);
+  box-shadow:
+    0 13px 26px #05080d52,
+    inset 0 1px 1px #ffffff24,
+    inset 0 -2px 3px #0005;
+  position: relative;
+  overflow: hidden;
+}
+.gauge-card:before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 42%;
+  background: linear-gradient(180deg, #ffffff09, transparent);
+  pointer-events: none;
+}
+.theme-light .gauge-card {
+  background: var(--panel-light-background);
+  border-color: var(--panel-border);
+  box-shadow: var(--panel-light-shadow);
+}
+.sparkline-card {
+  min-width: 0;
+  height: 100%;
+  padding: var(--panel-padding);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  background: linear-gradient(145deg, #273141, #171e29);
+  box-shadow:
+    0 7px 15px #05080d30,
+    inset 0 1px #ffffff14;
+  color: #dce5f0;
+  display: flex;
+  flex-direction: column;
+}
+.theme-light .sparkline-card {
+  border-color: var(--panel-border);
+  background: var(--panel-light-background);
+  box-shadow: var(--panel-light-shadow);
+  color: #344254;
+}
+.sparkline-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font:
+    700 12px Manrope,
+    sans-serif;
+}
+.sparkline-heading strong {
+  font:
+    700 13px "DM Mono",
+    monospace;
+}
+.sparkline-heading .io-values {
+  display: flex;
+  gap: 7px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.sparkline-heading .io-values span:last-child {
+  color: #f0a66c;
+}
+.sparkline-card svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  flex: 1;
+  margin-top: 6px;
+  overflow: visible;
+}
+.sparkline-area {
+  fill: var(--spark-accent);
+  opacity: 0.16;
+}
+.sparkline-line {
+  fill: none;
+  stroke: var(--spark-accent);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.sparkline-line.secondary {
+  stroke: #f0a66c;
+}
+.gauge-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+}
+.gauge-label {
+  font:
+    700 14px Manrope,
+    sans-serif;
+  white-space: nowrap;
+}
+.gauge-status {
+  font-size: 9px;
+  color: #71d8af;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  letter-spacing: 0.45px;
+}
+.gauge-status i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #71d8af;
+  box-shadow: 0 0 6px #71d8af;
+}
+.gauge-status.muted {
+  color: #8792a0;
+}
+.gauge-status.muted i {
+  background: #657182;
+  box-shadow: none;
+}
+.dial-wrap {
+  width: min(100%, 190px);
+  margin: auto;
+  position: relative;
+  filter: none;
+}
+.dial-svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.bezel-outer {
+  fill: #283342;
+  stroke: #9aaac0;
+  stroke-width: 1.4;
+  filter: drop-shadow(0 2px 1px #03060b);
+}
+.bezel-inner {
+  fill: #161c26;
+  stroke: #647389;
+  stroke-width: 1.4;
+}
+.theme-light .bezel-outer {
+  fill: #b7c4d5;
+  stroke: #8c9bb0;
+}
+.theme-light .bezel-inner {
+  fill: #e4eaf1;
+  stroke: #fff;
+}
+.theme-light .hub-ring {
+  fill: #aab6c5;
+  stroke: #64758a;
+}
+.theme-light .hub {
+  fill: #e9eef4;
+  stroke: #68788c;
+}
+.tick {
+  stroke: var(--dial-tick);
+  stroke-width: 1.2;
+  opacity: 0.88;
+}
+.tick.major {
+  stroke: var(--dial-tick-major);
+  stroke-width: 2;
+  opacity: 1;
+}
+.dial-number {
+  font:
+    10px "DM Mono",
+    monospace;
+  fill: var(--dial-number);
+}
+.dial-unit {
+  font:
+    700 13px "DM Mono",
+    monospace;
+  fill: var(--gauge-accent);
+  letter-spacing: 1px;
+}
+.needle-group {
+  transform-box: view-box;
+  transform-origin: 100px 98px;
+  transition: transform 1s cubic-bezier(0.2, 0.75, 0.2, 1);
+}
+.needle {
+  fill: #f17b79;
+  stroke: #ffc1ae;
+  stroke-width: 0.65;
+  filter: drop-shadow(0 0 3px #ff61536c);
+}
+.needle-tip {
+  fill: #ffe0cd;
+}
+.hub-ring {
+  fill: #242d3b;
+  stroke: #7e8da2;
+  stroke-width: 1;
+}
+.hub {
+  fill: #bcc9d9;
+  stroke: #141a22;
+  stroke-width: 2;
+}
+.dial-reading {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8%;
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 4px;
+  pointer-events: none;
+  text-shadow: 0 2px 6px #0008;
+}
+.dial-reading strong {
+  font:
+    700 clamp(20px, 2.7vw, 28px) Manrope,
+    sans-serif;
+  letter-spacing: -1px;
+  color: #f1f3f6;
+}
+.theme-light .dial-reading strong {
+  color: #283341;
+}
+.theme-light .dial-reading span {
+  color: #4a596a;
+}
+.dial-reading span {
+  font:
+    8px "DM Mono",
+    monospace;
+  color: #a7b1bf;
+  letter-spacing: 0.5px;
+}
+.dial-reading.storage-reading strong {
+  font:
+    700 clamp(12px, 1.4vw, 16px) Manrope,
+    sans-serif;
+  letter-spacing: -0.25px;
+  white-space: nowrap;
+}
+.gauge-card.is-offline .dial-reading strong {
+  color: #a8b2c0;
+}
