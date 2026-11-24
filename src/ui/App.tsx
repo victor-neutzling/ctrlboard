@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
+import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 
 type Screen = "gauges" | "deck" | "controls";
 type PowerAction = "logout" | "lock" | "shutdown" | "restart";
@@ -287,10 +288,11 @@ function appendSample(previous: number[], value: number | null): number[] {
 }
 
 const screenOrder: Screen[] = ["controls", "deck", "gauges"];
+type Theme = "light" | "dark" | "contrast";
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("deck");
-  const [dark, setDark] = useState(true);
+  const [theme, setTheme] = useState<Theme>("dark");
   const [metrics, setMetrics] = useState<Metric>(previewMetric);
   const [history, setHistory] = useState<MetricHistory>({
     fps: [],
@@ -310,6 +312,7 @@ export default function App() {
   const [powerEnabled, setPowerEnabled] = useState(false);
   const [pendingAction, setPendingAction] = useState<PowerAction | null>(null);
   const screenTrackRef = useRef<HTMLDivElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const swipeStart = useRef<{
     x: number;
     y: number;
@@ -382,6 +385,121 @@ export default function App() {
     setToast(message);
     window.setTimeout(() => setToast(""), 2400);
   }, []);
+  const showButtonRipple = (
+    button: HTMLButtonElement,
+    clientX: number,
+    clientY: number,
+  ) => {
+    const bounds = button.getBoundingClientRect();
+    const x = clientX - bounds.left;
+    const y = clientY - bounds.top;
+    const radius = Math.max(
+      Math.hypot(x, y),
+      Math.hypot(bounds.width - x, y),
+      Math.hypot(x, bounds.height - y),
+      Math.hypot(bounds.width - x, bounds.height - y),
+    );
+    const ripple = document.createElement("span");
+    ripple.className = "button-ripple";
+    ripple.style.left = `${x}px`;
+    ripple.style.top = `${y}px`;
+    ripple.style.width = `${radius * 2}px`;
+    ripple.style.height = `${radius * 2}px`;
+    ripple.addEventListener("animationend", () => ripple.remove(), {
+      once: true,
+    });
+    button.append(ripple);
+  };
+  const playButtonSound = () => {
+    try {
+      const context =
+        audioContextRef.current ?? new AudioContext({ latencyHint: "interactive" });
+      audioContextRef.current = context;
+      if (context.state === "suspended") void context.resume();
+
+      const now = context.currentTime;
+      const playTone = (
+        frequency: number,
+        endFrequency: number,
+        startAt: number,
+        duration: number,
+        peak: number,
+        type: OscillatorType,
+      ) => {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(frequency, now + startAt);
+        oscillator.frequency.exponentialRampToValueAtTime(
+          endFrequency,
+          now + startAt + duration,
+        );
+        gain.gain.setValueAtTime(0.0001, now + startAt);
+        gain.gain.exponentialRampToValueAtTime(peak, now + startAt + 0.008);
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          now + startAt + duration,
+        );
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start(now + startAt);
+        oscillator.stop(now + startAt + duration + 0.01);
+      };
+
+      playTone(620, 300, 0, 0.035, 0.4, "triangle");
+      playTone(180, 90, 0.002, 0.048, 0.17, "sine");
+
+      const clickLength = Math.ceil(context.sampleRate * 0.008);
+      const clickBuffer = context.createBuffer(1, clickLength, context.sampleRate);
+      const clickSamples = clickBuffer.getChannelData(0);
+      for (let index = 0; index < clickLength; index += 1) {
+        clickSamples[index] = (Math.random() * 2 - 1) * (1 - index / clickLength);
+      }
+      const click = context.createBufferSource();
+      const clickFilter = context.createBiquadFilter();
+      const clickGain = context.createGain();
+      click.buffer = clickBuffer;
+      clickFilter.type = "lowpass";
+      clickFilter.frequency.setValueAtTime(2400, now);
+      clickGain.gain.setValueAtTime(0.0001, now);
+      clickGain.gain.exponentialRampToValueAtTime(0.24, now + 0.0015);
+      clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.01);
+      click.connect(clickFilter);
+      clickFilter.connect(clickGain);
+      clickGain.connect(context.destination);
+      click.start(now);
+    } catch {
+      // Audio feedback is optional; button actions should work without it.
+    }
+  };
+  const onButtonPointerDownCapture = (
+    event: React.PointerEvent<HTMLElement>,
+  ) => {
+    const target = event.target instanceof Element ? event.target : null;
+    const button = target?.closest("button");
+    if (
+      button instanceof HTMLButtonElement &&
+      (button.closest(".app-card") || button.closest(".controls-screen")) &&
+      !button.disabled
+    ) {
+      showButtonRipple(button, event.clientX, event.clientY);
+    }
+  };
+  const onButtonKeyDownCapture = (
+    event: React.KeyboardEvent<HTMLElement>,
+  ) => {
+    if ((event.key !== "Enter" && event.key !== " ") || event.repeat) return;
+    const target = event.target instanceof Element ? event.target : null;
+    const button = target?.closest("button");
+    if (
+      button instanceof HTMLButtonElement &&
+      (button.closest(".app-card") || button.closest(".controls-screen")) &&
+      !button.disabled
+    ) {
+      const bounds = button.getBoundingClientRect();
+      showButtonRipple(button, bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+    }
+  };
   const onPointerDown = (event: React.PointerEvent<HTMLElement>) => {
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest("input, select, textarea, [role='switch']")) {
@@ -480,10 +598,21 @@ export default function App() {
     track.style.transform = "";
   };
   const onClickCapture = (event: React.MouseEvent<HTMLElement>) => {
-    if (!suppressClick.current) return;
-    suppressClick.current = false;
-    event.preventDefault();
-    event.stopPropagation();
+    if (suppressClick.current) {
+      suppressClick.current = false;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    const target = event.target instanceof Element ? event.target : null;
+    const button = target?.closest("button");
+    if (
+      button instanceof HTMLButtonElement &&
+      (button.closest(".app-card") || button.closest(".controls-screen")) &&
+      !button.disabled
+    ) {
+      playButtonSound();
+    }
   };
   const launch = async (index: number) => {
     const app = applications[index];
@@ -499,6 +628,18 @@ export default function App() {
       }
     } else if (isNative) notify(`${app.name} is not installed`);
     else notify(`${app.name} · preview action`);
+  };
+  const resizeWindowForDebug = async () => {
+    if (!isTauri()) {
+      notify("Window resizing is available in the desktop app");
+      return;
+    }
+    try {
+      await getCurrentWindow().setSize(new LogicalSize(1024, 600));
+      notify("Window resized to 1024 × 600");
+    } catch (error) {
+      notify(`Could not resize window: ${String(error)}`);
+    }
   };
   const runPowerAction = async () => {
     if (!pendingAction || !powerEnabled) return;
@@ -527,7 +668,7 @@ export default function App() {
               unit="FPS"
               range={240}
               accent="#4bb5fa"
-              light={!dark}
+              light={theme === "light"}
               unavailable={metrics.fps == null}
             />
             <Dial
@@ -536,7 +677,7 @@ export default function App() {
               unit="%"
               range={100}
               accent="#ed9f61"
-              light={!dark}
+              light={theme === "light"}
               unavailable={metrics.cpu_percent == null}
             />
             <Dial
@@ -545,7 +686,7 @@ export default function App() {
               unit="%"
               range={100}
               accent="#b49afa"
-              light={!dark}
+              light={theme === "light"}
               unavailable={metrics.gpu_percent == null}
             />
             <Dial
@@ -554,7 +695,7 @@ export default function App() {
               unit="%"
               range={100}
               accent="#74d5ba"
-              light={!dark}
+              light={theme === "light"}
               unavailable={metrics.storage_percent == null}
               reading={
                 metrics.storage_used_gb != null &&
@@ -703,6 +844,14 @@ export default function App() {
                   </button>
                 ))}
               </div>
+              <button
+                type="button"
+                className="debug-resize-button"
+                onClick={() => void resizeWindowForDebug()}
+                aria-label="Debug: resize window to 1024 by 600"
+              >
+                DEBUG · 1024 × 600
+              </button>
             </article>
 
             <article className="settings-panel">
@@ -725,18 +874,25 @@ export default function App() {
               <h2>Appearance</h2>
               <div className="appearance-options">
                 <button
-                  className={`appearance-key ${!dark ? "selected" : ""}`}
-                  onClick={() => setDark(false)}
-                  aria-pressed={!dark}
+                  className={`appearance-key ${theme === "light" ? "selected" : ""}`}
+                  onClick={() => setTheme("light")}
+                  aria-pressed={theme === "light"}
                 >
                   <span aria-hidden="true">☼</span> Light
                 </button>
                 <button
-                  className={`appearance-key ${dark ? "selected" : ""}`}
-                  onClick={() => setDark(true)}
-                  aria-pressed={dark}
+                  className={`appearance-key ${theme === "dark" ? "selected" : ""}`}
+                  onClick={() => setTheme("dark")}
+                  aria-pressed={theme === "dark"}
                 >
                   <span aria-hidden="true">☾</span> Dark
+                </button>
+                <button
+                  className={`appearance-key ${theme === "contrast" ? "selected" : ""}`}
+                  onClick={() => setTheme("contrast")}
+                  aria-pressed={theme === "contrast"}
+                >
+                  <span aria-hidden="true">◐</span> Midnight
                 </button>
               </div>
             </article>
@@ -811,9 +967,11 @@ export default function App() {
   );
 
   return (
-    <div className={`app-shell ${dark ? "theme-dark" : "theme-light"}`}>
+    <div className={`app-shell theme-${theme}`}>
       <main
         className="screen-content"
+        onPointerDownCapture={onButtonPointerDownCapture}
+        onKeyDownCapture={onButtonKeyDownCapture}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}

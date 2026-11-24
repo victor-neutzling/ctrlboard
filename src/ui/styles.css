@@ -492,6 +492,48 @@ select:focus-visible {
     box-shadow 0.12s;
   touch-action: manipulation;
 }
+.app-card,
+.controls-screen button:not(.safety-toggle) {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.button-ripple {
+  position: absolute;
+  z-index: 2;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  background: radial-gradient(
+    circle,
+    rgba(231, 245, 255, 0.19) 0%,
+    rgba(178, 220, 255, 0.12) 46%,
+    rgba(137, 198, 255, 0.05) 68%,
+    transparent 76%
+  );
+  border: 1px solid rgba(218, 240, 255, 0.3);
+  box-shadow:
+    inset 0 0 18px rgba(215, 239, 255, 0.1),
+    0 0 9px rgba(135, 202, 255, 0.16);
+  backdrop-filter: blur(1px);
+  pointer-events: none;
+  animation: button-ripple-out 780ms cubic-bezier(0.16, 0.7, 0.24, 1) forwards;
+}
+@keyframes button-ripple-out {
+  0% {
+    transform: translate(-50%, -50%) scale(0.035);
+    opacity: 0;
+  }
+  16% {
+    opacity: 0.62;
+  }
+  72% {
+    opacity: 0.25;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.08);
+    opacity: 0;
+  }
+}
 .theme-light .app-card {
   border-color: var(--panel-border);
   background: var(--panel-light-background);
@@ -749,6 +791,25 @@ select:focus-visible {
   gap: 10px;
   width: 100%;
 }
+.debug-resize-button {
+  align-self: center;
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font:
+    700 10px "DM Mono",
+    monospace;
+  letter-spacing: 0.35px;
+  cursor: pointer;
+}
+.debug-resize-button:active {
+  background: rgba(112, 184, 238, 0.12);
+  color: var(--text);
+}
 .choice-row {
   height: auto;
   min-height: 58px;
@@ -847,8 +908,8 @@ select:focus-visible {
 }
 .appearance-options {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
 .appearance-key {
   min-height: 58px;
@@ -1206,4 +1267,95 @@ select:focus-visible {
   .screen-track {
     transition-duration: 0ms;
   }
+}
+
+/* OLED appearance: pure black canvas with softly lit glass surfaces. */
+.theme-contrast {
+  --panel-border: rgba(255, 255, 255, 0.16);
+  --text: #f7f8fb;
+  --muted: #aeb5c1;
+  --faint: #7c8593;
+  --surface: #101115;
+  --surface-hi: #202126;
+  --surface-low: #050506;
+  --line: rgba(255, 255, 255, 0.14);
+  --accent: #8bcaff;
+  --accent-glow: rgba(92, 178, 255, 0.3);
+  --dial-tick: #7c818b;
+  --dial-tick-major: #f0f2f7;
+  --dial-number: #e2e5eb;
+  --control-icon-hi: #22242a;
+  --control-icon: #0c0d10;
+  color-scheme: dark;
+  background: #000;
+}
+.theme-contrast .gauge-card,
+.theme-contrast .sparkline-card,
+.theme-contrast .app-card,
+.theme-contrast .settings-panel {
+  background: linear-gradient(145deg, rgba(34, 36, 42, 0.94), rgba(12, 13, 16, 0.97) 60%, #050506);
+  border-color: rgba(255, 255, 255, 0.17);
+  box-shadow:
+    0 9px 24px rgba(0, 0, 0, 0.8),
+    0 0 18px rgba(180, 205, 255, 0.045),
+    inset 0 1px rgba(255, 255, 255, 0.17),
+    inset 0 -1px rgba(255, 255, 255, 0.035);
+  color: var(--text);
+}
+.theme-contrast .gauge-card::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent);
+}
+.theme-contrast .bezel-outer {
+  fill: #17191e;
+  stroke: #d0d5df;
+}
+.theme-contrast .bezel-inner {
+  fill: #050506;
+  stroke: #656c78;
+}
+.theme-contrast .hub-ring {
+  fill: #30333a;
+  stroke: #e3e7ef;
+}
+.theme-contrast .hub {
+  fill: #f5f7fb;
+  stroke: #15161a;
+}
+.theme-contrast .dial-reading strong {
+  color: #fff;
+}
+.theme-contrast .dial-reading span {
+  color: #c5cad3;
+}
+.theme-contrast .choice-row {
+  background: linear-gradient(145deg, #191a1f, #090a0c);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.09);
+}
+.theme-contrast .choice-row.chosen,
+.theme-contrast .appearance-key.selected,
+.theme-contrast .layout-key.selected {
+  background: linear-gradient(145deg, rgba(77, 157, 222, 0.32), rgba(30, 70, 107, 0.2));
+  border-color: rgba(139, 202, 255, 0.58);
+  color: #f7fbff;
+}
+.theme-contrast .power-action,
+.theme-contrast .appearance-key,
+.theme-contrast .layout-key {
+  background: linear-gradient(145deg, #202126, #0a0b0e);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #f4f6fa;
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.65),
+    inset 0 1px rgba(255, 255, 255, 0.13);
+}
+.theme-contrast .level-row input[type="range"] {
+  background: linear-gradient(to right, #62baff 0 var(--range-value), #383a40 var(--range-value) 100%);
+}
+.theme-contrast .level-row input[type="range"]::-webkit-slider-thumb,
+.theme-contrast .level-row input[type="range"]::-moz-range-thumb {
+  background: linear-gradient(145deg, #fff, #c9d1dc);
+}
+.theme-contrast .app-name {
+  color: #f7f8fb;
 }
