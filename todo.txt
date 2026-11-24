@@ -1,0 +1,12 @@
+- move to main computer
+- integrate with touch screen
+- change click events to touch events 
+- prevent mouse from jumping to wherever i touch
+- prevent it from taking focus when i touch on it, x11/wayland focus hints or whatever that is
+- add fluff
+   - screen ripple effect when clicking on something or launching applicaiton
+   - custom per-application menus
+   - configurable app slection (hold to delete, click + to add)
+   - configuration page with editable cards, gauges and other configs
+   - system agnostic middleware (maybe not lol)
+   - more!
