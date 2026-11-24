@@ -8,5 +8,6 @@
    - custom per-application menus
    - configurable app slection (hold to delete, click + to add)
    - configuration page with editable cards, gauges and other configs
+   - clicky audio feedback
    - system agnostic middleware (maybe not lol)
    - more!
