@@ -149,7 +149,7 @@ export function ControlsScreen({
         <article className="settings-panel">
           <h2>Audio output</h2>
           <div className="choice-list">
-            {audioOutputs.map((item, index) => (
+            {audioOutputs.map((item) => (
               <button
                 key={item.id}
                 {...hold}
@@ -161,9 +161,6 @@ export function ControlsScreen({
                 aria-label={`Set ${item.label} as the audio output`}
                 title={item.label}
               >
-                <span className="choice-icon" aria-hidden="true">
-                  {index ? "♬" : "◖"}
-                </span>
                 <strong>{item.label}</strong>
               </button>
             ))}
