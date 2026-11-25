@@ -20,12 +20,11 @@
   -webkit-backdrop-filter: blur(14px);
 }
 .control-popover-layer.theme-dark {
-  --panel-border: rgba(177, 199, 231, 0.25);
+  --panel-border: color-mix(in srgb, var(--accent) 20%, rgba(190, 195, 202, 0.18));
   --text: #e9edf3;
   --muted: #a4adba;
-  --surface: #1b222d;
-  --surface-hi: #303b4b;
-  --accent: #55b7fa;
+  --surface: color-mix(in srgb, var(--accent) 9%, #1b1c20);
+  --surface-hi: color-mix(in srgb, var(--accent) 13%, #28292c);
   color-scheme: dark;
 }
 .control-popover {
@@ -104,8 +103,8 @@
   box-shadow: 0 14px 38px #26364c3b, inset 0 1px #fff;
 }
 .theme-dark .control-popover.settings-panel {
-  background: linear-gradient(145deg, rgba(43, 54, 70, 0.97), rgba(23, 29, 39, 0.98));
-  border-color: rgba(177, 199, 231, 0.25);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 14%, rgba(43, 44, 47, 0.97)), color-mix(in srgb, var(--accent) 7%, rgba(20, 21, 23, 0.99)));
+  border-color: var(--panel-border);
   box-shadow: 0 14px 38px #0009, inset 0 1px #ffffff20;
 }
 .theme-contrast .control-popover.settings-panel {

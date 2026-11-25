@@ -7,6 +7,7 @@
   -moz-osx-font-smoothing: grayscale;
   font-optical-sizing: auto;
   font-size: 14px;
+  --accent: #55b7fa;
 }
 * {
   box-sizing: border-box;
@@ -28,7 +29,7 @@ button {
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid #5fbaff;
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 .app-shell {
@@ -36,31 +37,31 @@ select:focus-visible {
   --panel-gap: 12px;
   --panel-padding: 12px;
   --panel-radius: 14px;
-  --panel-border: rgba(177, 199, 231, 0.17);
+  --panel-border: color-mix(in srgb, var(--accent) 16%, rgba(190, 195, 202, 0.13));
   --text: #e9edf3;
   --muted: #858e9d;
   --faint: #626d7d;
-  --surface: #1b222d;
-  --surface-hi: #232c39;
-  --surface-low: #151b24;
-  --line: rgba(197, 213, 236, 0.1);
+  --surface: color-mix(in srgb, var(--accent) 9%, #1b1c20);
+  --surface-hi: color-mix(in srgb, var(--accent) 13%, #28292c);
+  --surface-low: color-mix(in srgb, var(--accent) 6%, #141518);
+  --line: color-mix(in srgb, var(--accent) 15%, rgba(197, 199, 202, 0.1));
   --accent: #55b7fa;
-  --accent-glow: rgba(61, 160, 255, 0.32);
-  --dial-tick: #79899d;
-  --dial-tick-major: #d2dce8;
-  --dial-number: #d1dae5;
-  --control-icon-hi: #344255;
-  --control-icon: #222b39;
+  --accent-glow: color-mix(in srgb, var(--accent) 32%, transparent);
+  --dial-tick: color-mix(in srgb, var(--accent) 18%, #798087);
+  --dial-tick-major: color-mix(in srgb, var(--accent) 14%, #d2d3d5);
+  --dial-number: color-mix(in srgb, var(--accent) 14%, #d1d2d4);
+  --control-icon-hi: color-mix(in srgb, var(--accent) 17%, #303235);
+  --control-icon: color-mix(in srgb, var(--accent) 9%, #1c1d20);
   width: 100vw;
   height: 100vh;
   min-height: 0;
   background:
     radial-gradient(
       ellipse at 76% -22%,
-      rgba(76, 103, 148, 0.17),
+      color-mix(in srgb, var(--accent) 15%, transparent),
       transparent 42%
     ),
-    #11151d;
+    color-mix(in srgb, var(--accent) 4%, #111316);
   color: var(--text);
   display: flex;
   flex-direction: column;
@@ -83,7 +84,7 @@ select:focus-visible {
   --surface-low: #e9edf3;
   --line: rgba(39, 56, 79, 0.12);
   --accent: #168de1;
-  --accent-glow: rgba(61, 160, 255, 0.2);
+  --accent-glow: color-mix(in srgb, var(--accent) 20%, transparent);
   --dial-tick: #7d8a99;
   --dial-tick-major: #435266;
   --dial-number: #3a4858;

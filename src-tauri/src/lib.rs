@@ -1,5 +1,6 @@
-use serde::Serialize;
-use std::{fs, path::Path};
+use serde::{Deserialize, Serialize};
+use std::{fs, path::Path, sync::Mutex};
+use tauri::{Emitter, Manager};
 
 mod system_controls;
 
@@ -190,18 +191,215 @@ fn collect_desktop_files(directory: &Path, depth: usize, files: &mut Vec<std::pa
     }
 }
 
+#[derive(Serialize)]
+struct InstalledApplication {
+    desktop_id: String,
+    name: String,
+    icon: Option<String>,
+    desktop_path: String,
+    command: String,
+}
+
+fn base64(bytes: &[u8]) -> String {
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut output = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let a = chunk[0];
+        let b = *chunk.get(1).unwrap_or(&0);
+        let c = *chunk.get(2).unwrap_or(&0);
+        output.push(TABLE[(a >> 2) as usize] as char);
+        output.push(TABLE[(((a & 3) << 4) | (b >> 4)) as usize] as char);
+        output.push(if chunk.len() > 1 { TABLE[(((b & 15) << 2) | (c >> 6)) as usize] as char } else { '=' });
+        output.push(if chunk.len() > 2 { TABLE[(c & 63) as usize] as char } else { '=' });
+    }
+    output
+}
+
+fn resolve_icon(icon: &str) -> Option<String> {
+    let direct = Path::new(icon);
+    let mut candidates = Vec::new();
+    if direct.is_absolute() { candidates.push(direct.to_path_buf()); }
+    let dirs = std::env::var("XDG_DATA_DIRS").unwrap_or_else(|_| "/usr/local/share:/usr/share".into());
+    let mut roots = vec![std::env::var_os("XDG_DATA_HOME").map(std::path::PathBuf::from).unwrap_or_else(|| std::env::var_os("HOME").map(std::path::PathBuf::from).unwrap_or_default().join(".local/share"))];
+    roots.extend(std::env::split_paths(&dirs));
+    for root in roots {
+        for theme in ["hicolor", "Adwaita", "breeze"] {
+            for size in ["scalable/apps", "256x256/apps", "128x128/apps", "96x96/apps", "64x64/apps", "48x48/apps", "32x32/apps"] {
+                for extension in ["svg", "png", "xpm"] {
+                    candidates.push(root.join("icons").join(theme).join(size).join(format!("{icon}.{extension}")));
+                }
+            }
+        }
+        for extension in ["png", "svg", "xpm"] { candidates.push(root.join("pixmaps").join(format!("{icon}.{extension}"))); }
+    }
+    for path in candidates {
+        let Ok(bytes) = fs::read(&path) else { continue };
+        let mime = match path.extension().and_then(|value| value.to_str()) { Some("svg") => "image/svg+xml", Some("xpm") => "image/x-xpixmap", _ => "image/png" };
+        return Some(format!("data:{mime};base64,{}", base64(&bytes)));
+    }
+    None
+}
+
+fn desktop_application(path: &Path) -> Option<InstalledApplication> {
+    let contents = fs::read_to_string(path).ok()?;
+    let mut in_entry = false;
+    let mut name = None;
+    let mut icon = None;
+    let mut command = None;
+    let mut hidden = false;
+    for line in contents.lines() {
+        if line.starts_with('[') { in_entry = line == "[Desktop Entry]"; continue; }
+        if !in_entry { continue; }
+        if let Some(value) = line.strip_prefix("Name=") { if name.is_none() { name = Some(value.to_owned()); } }
+        if let Some(value) = line.strip_prefix("Icon=") { icon = Some(value.to_owned()); }
+        if let Some(value) = line.strip_prefix("Exec=") { command = Some(value.to_owned()); }
+        if line == "NoDisplay=true" || line == "Hidden=true" { hidden = true; }
+    }
+    if hidden { return None; }
+    Some(InstalledApplication {
+        desktop_id: path.file_name()?.to_str()?.to_owned(),
+        name: name.filter(|value| !value.is_empty()).unwrap_or_else(|| path.file_stem().and_then(|value| value.to_str()).unwrap_or("Application").replace(['-', '_'], " ")),
+        icon: icon.and_then(|value| resolve_icon(&value)),
+        desktop_path: path.to_string_lossy().into_owned(),
+        command: command.unwrap_or_default(),
+    })
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(default)]
+struct AppPreferences {
+    initialized: bool,
+    theme: String,
+    accent_color: String,
+    sound_enabled: bool,
+    sound_volume: u8,
+    long_press_duration_ms: u16,
+    power_enabled: bool,
+    confirm_power_actions: bool,
+    start_screen: String,
+    window_width: u32,
+    window_height: u32,
+    launcher_app_ids: Vec<String>,
+}
+
+impl Default for AppPreferences {
+    fn default() -> Self {
+        Self {
+            initialized: false,
+            theme: "dark".into(),
+            accent_color: "blue".into(),
+            sound_enabled: true,
+            sound_volume: 65,
+            long_press_duration_ms: 560,
+            power_enabled: false,
+            confirm_power_actions: true,
+            start_screen: "deck".into(),
+            window_width: 1024,
+            window_height: 600,
+            launcher_app_ids: Vec::new(),
+        }
+    }
+}
+
+fn preferences_file(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    app.path()
+        .app_config_dir()
+        .map(|directory| directory.join("preferences.json"))
+        .map_err(|error| format!("Could not find the app settings folder: {error}"))
+}
+
+fn read_preferences(app: &tauri::AppHandle) -> Result<AppPreferences, String> {
+    let path = preferences_file(app)?;
+    match fs::read_to_string(path) {
+        Ok(contents) => serde_json::from_str(&contents)
+            .map_err(|error| format!("Could not read app settings: {error}")),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(AppPreferences::default()),
+        Err(error) => Err(format!("Could not read app settings: {error}")),
+    }
+}
+
 #[tauri::command]
-fn list_applications() -> Vec<String> {
+fn load_app_preferences(app: tauri::AppHandle) -> Result<AppPreferences, String> {
+    read_preferences(&app)
+}
+
+#[tauri::command]
+fn save_app_preferences(app: tauri::AppHandle, preferences: AppPreferences) -> Result<(), String> {
+    if !["light", "dark", "contrast"].contains(&preferences.theme.as_str()) {
+        return Err("Unknown appearance mode".into());
+    }
+    if !["system", "blue", "teal", "green", "amber", "orange", "red", "pink", "purple", "slate"].contains(&preferences.accent_color.as_str()) {
+        return Err("Unknown accent color".into());
+    }
+    if !["deck", "gauges", "controls"].contains(&preferences.start_screen.as_str()) {
+        return Err("Unknown startup screen".into());
+    }
+    if preferences.sound_volume > 100
+        || !(300..=1200).contains(&preferences.long_press_duration_ms)
+        || !(640..=3840).contains(&preferences.window_width)
+        || !(420..=2160).contains(&preferences.window_height)
+        || preferences.launcher_app_ids.len() > 12
+    {
+        return Err("One or more settings are outside the supported range".into());
+    }
+    let unique_ids: std::collections::HashSet<_> = preferences.launcher_app_ids.iter().collect();
+    if unique_ids.len() != preferences.launcher_app_ids.len() {
+        return Err("Launcher applications must be unique".into());
+    }
+    static WRITE_LOCK: Mutex<()> = Mutex::new(());
+    let _guard = WRITE_LOCK.lock().unwrap_or_else(|error| error.into_inner());
+    let path = preferences_file(&app)?;
+    let directory = path.parent().ok_or("Invalid app settings path")?;
+    fs::create_dir_all(directory).map_err(|error| format!("Could not create app settings folder: {error}"))?;
+    let temporary = path.with_extension("json.tmp");
+    let contents = serde_json::to_vec_pretty(&preferences)
+        .map_err(|error| format!("Could not encode app settings: {error}"))?;
+    fs::write(&temporary, contents).map_err(|error| format!("Could not save app settings: {error}"))?;
+    fs::rename(&temporary, &path).map_err(|error| format!("Could not update app settings: {error}"))?;
+    app.emit("preferences-updated", preferences)
+        .map_err(|error| format!("Could not notify the app about new settings: {error}"))
+}
+
+#[tauri::command]
+fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("settings") {
+        let _ = window.show();
+        let _ = window.set_focus();
+        return Ok(());
+    }
+    tauri::WebviewWindowBuilder::new(
+        &app,
+        "settings",
+        tauri::WebviewUrl::App("index.html?window=settings".into()),
+    )
+    .title("Ctrlboard Settings")
+    .inner_size(980.0, 720.0)
+    .min_inner_size(720.0, 540.0)
+    .resizable(true)
+    .build()
+    .map(|_| ())
+    .map_err(|error| format!("Could not open settings: {error}"))
+}
+
+#[tauri::command]
+fn set_main_window_size(app: tauri::AppHandle, width: u32, height: u32) -> Result<(), String> {
+    if !(640..=3840).contains(&width) || !(420..=2160).contains(&height) {
+        return Err("Window size must be between 640×420 and 3840×2160".into());
+    }
+    let window = app.get_webview_window("main").ok_or("Main window is not open")?;
+    window.set_size(tauri::LogicalSize::new(width as f64, height as f64))
+        .map_err(|error| format!("Could not resize the main window: {error}"))
+}
+
+#[tauri::command]
+fn list_applications() -> Vec<InstalledApplication> {
     let mut files = Vec::new();
     for directory in application_directories() {
         collect_desktop_files(&directory, 0, &mut files);
     }
     files.sort();
     files.dedup();
-    files
-        .into_iter()
-        .filter_map(|path| path.file_name()?.to_str().map(str::to_owned))
-        .collect()
+    files.into_iter().filter_map(|path| desktop_application(&path)).collect()
 }
 
 #[tauri::command]
@@ -296,10 +494,25 @@ async fn run_system_action(action: String) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                let preferences = read_preferences(app.handle()).unwrap_or_default();
+                let _ = window.set_size(tauri::LogicalSize::new(
+                    preferences.window_width as f64,
+                    preferences.window_height as f64,
+                ));
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             read_metrics,
             list_applications,
             launch_application,
+            load_app_preferences,
+            save_app_preferences,
+            open_settings_window,
+            set_main_window_size,
             run_system_action,
             system_controls::read_system_controls,
             system_controls::set_audio_volume,

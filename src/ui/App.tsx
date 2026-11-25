@@ -1,35 +1,102 @@
-import { useCallback, useRef, useState } from "react";
-import type { MouseEvent, ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
-import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { open as openNativeFilePicker } from "@tauri-apps/plugin-dialog";
 import { ControlsScreen } from "./components/screens/ControlsScreen";
 import { GaugesScreen } from "./components/screens/GaugesScreen";
 import { LauncherScreen } from "./components/screens/LauncherScreen";
 import { PowerConfirmation } from "./components/PowerConfirmation";
 import { Toast } from "./components/Toast";
 import { applications } from "./data/applications";
+import { configureAudioFeedback } from "./audioFeedback";
+import { setLongPressDuration } from "./hooks/useLongPress";
+import { accentValue, SettingsWindow } from "./settings/SettingsWindow";
 import { useButtonFeedback } from "./hooks/useButtonFeedback";
 import { useDesktopControls } from "./hooks/useDesktopControls";
 import { useScreenSwipe } from "./hooks/useScreenSwipe";
 import { useSystemMetrics } from "./hooks/useSystemMetrics";
-import type { PowerAction, Screen, Theme } from "./types";
+import { defaultAppPreferences } from "./types";
+import type { AppPreferences, PowerAction, Screen } from "./types";
 
 export default function App() {
+  if (isTauri() && getCurrentWindow().label === "settings") return <SettingsWindow />;
+  return <Dashboard />;
+}
+
+function Dashboard() {
   const [screen, setScreen] = useState<Screen>("deck");
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [preferences, setPreferences] = useState<AppPreferences>(defaultAppPreferences);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [toast, setToast] = useState("");
-  const [powerEnabled, setPowerEnabled] = useState(false);
+  const [launcherEditing, setLauncherEditing] = useState(false);
   const [pendingAction, setPendingAction] = useState<PowerAction | null>(null);
   const screenTrackRef = useRef<HTMLDivElement>(null);
 
   const { metrics, history, isNative, installedApps } = useSystemMetrics();
+  useEffect(() => {
+    if (screen !== "deck") setLauncherEditing(false);
+  }, [screen]);
+  const launcherApps = useMemo(() => preferences.launcher_app_ids.flatMap((id) => {
+    const app = installedApps.find((candidate) => candidate.desktop_id === id);
+    return app ? [app] : [];
+  }), [installedApps, preferences.launcher_app_ids]);
   const swipe = useScreenSwipe(screen, setScreen, screenTrackRef);
   const feedback = useButtonFeedback();
+  const accent = accentValue(preferences.accent_color);
 
   const notify = useCallback((message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(""), 2400);
   }, []);
+
+  const persistPreferences = useCallback((next: AppPreferences) => {
+    setPreferences(next);
+    void invoke("save_app_preferences", { preferences: next }).catch((error: unknown) => notify(`Could not save settings: ${String(error)}`));
+  }, [notify]);
+
+  useEffect(() => {
+    let active = true;
+    let unlisten: (() => void) | undefined;
+    void listen<AppPreferences>("preferences-updated", (event) => {
+      if (active) setPreferences(event.payload);
+    }).then((stop) => { unlisten = stop; });
+    void invoke<AppPreferences>("load_app_preferences").then((stored) => {
+      if (!active) return;
+      setPreferences(stored);
+      setScreen(stored.start_screen);
+      setPreferencesLoaded(true);
+    }).catch((error: unknown) => {
+      if (active) {
+        setPreferencesLoaded(true);
+        notify(`Could not load settings: ${String(error)}`);
+      }
+    });
+    return () => { active = false; unlisten?.(); };
+  }, [notify]);
+
+  useEffect(() => {
+    if (!preferencesLoaded || !isNative || preferences.initialized) return;
+    let launcherAppIds: string[];
+    const legacy = localStorage.getItem("ctrlboard.launcher.apps");
+    if (legacy !== null) {
+      try { launcherAppIds = JSON.parse(legacy) as string[]; }
+      catch { launcherAppIds = []; }
+      localStorage.removeItem("ctrlboard.launcher.apps");
+    } else {
+      launcherAppIds = applications.flatMap((app) => {
+        const found = installedApps.find((candidate) => candidate.desktop_id.toLowerCase().includes(app.match));
+        return found ? [found.desktop_id] : [];
+      });
+    }
+    persistPreferences({ ...preferences, initialized: true, launcher_app_ids: launcherAppIds });
+  }, [installedApps, isNative, persistPreferences, preferences, preferencesLoaded]);
+
+  useEffect(() => {
+    configureAudioFeedback(preferences.sound_enabled, preferences.sound_volume);
+    setLongPressDuration(preferences.long_press_duration_ms);
+  }, [preferences.long_press_duration_ms, preferences.sound_enabled, preferences.sound_volume]);
 
   const {
     controls,
@@ -40,48 +107,57 @@ export default function App() {
     setKeyboardLayout,
   } = useDesktopControls(notify, screen === "controls");
 
-  const launchApplication = useCallback(async (index: number) => {
-    const application = applications[index];
-    const desktopId = installedApps.find((candidate) =>
-      candidate.toLowerCase().includes(application.match),
-    );
-
-    if (isNative && desktopId) {
+  const launchApplication = useCallback(async (desktopId: string) => {
+    const application = installedApps.find((candidate) => candidate.desktop_id === desktopId);
+    if (isNative && application) {
       try {
         await invoke("launch_application", { desktopId });
-        notify(`Launching ${desktopId.replace(/\.desktop$/, "")}`);
+        notify(`Launching ${application.name}`);
       } catch {
-        notify(`Could not launch ${desktopId}`);
+        notify(`Could not launch ${application.name}`);
       }
       return;
     }
 
-    notify(
-      isNative
-        ? `${application.name} is not installed`
-        : `${application.name} · preview action`,
-    );
+    notify(application ? `${application.name} · preview action` : "Application is no longer installed");
   }, [installedApps, isNative, notify]);
 
-  const resizeWindowForDebug = async () => {
-    if (!isTauri()) {
-      notify("Window resizing is available in the desktop app");
+  const addLauncherApp = (id: string) => persistPreferences({ ...preferences, launcher_app_ids: Array.from(new Set([...preferences.launcher_app_ids, id])) });
+  const removeLauncherApp = (id: string) => persistPreferences({ ...preferences, launcher_app_ids: preferences.launcher_app_ids.filter((item) => item !== id) });
+  const pickLauncherApp = async () => {
+    if (!isNative) {
+      notify("The native app selector is available in the desktop app");
       return;
     }
-
     try {
-      await getCurrentWindow().setSize(new LogicalSize(1024, 600));
-      notify("Window resized to 1024 × 600");
+      const path = await openNativeFilePicker({
+        title: "Choose an application to add",
+        defaultPath: "/usr/share/applications",
+        filters: [{ name: "Linux application launchers", extensions: ["desktop"] }],
+      });
+      if (!path || Array.isArray(path)) return;
+      const desktopId = path.split(/[\\/]/).pop();
+      const application = installedApps.find((candidate) => candidate.desktop_id === desktopId);
+      if (!application) {
+        notify("Choose an installed .desktop application launcher");
+        return;
+      }
+      if (preferences.launcher_app_ids.length >= 12) {
+        notify("The launcher can hold up to 12 apps");
+        return;
+      }
+      if (preferences.launcher_app_ids.includes(application.desktop_id)) {
+        notify(`${application.name} is already in the launcher`);
+        return;
+      }
+      addLauncherApp(application.desktop_id);
     } catch (error) {
-      notify(`Could not resize window: ${String(error)}`);
+      notify(`Could not open the application selector: ${String(error)}`);
     }
   };
 
-  const runPowerAction = async () => {
-    if (!pendingAction || !powerEnabled) return;
-    const action = pendingAction;
-    setPendingAction(null);
-
+  const performPowerAction = async (action: PowerAction) => {
+    if (!preferences.power_enabled) return;
     if (!isNative) {
       notify(`${action} · preview action`);
       return;
@@ -93,6 +169,23 @@ export default function App() {
     } catch (error) {
       notify(String(error));
     }
+  };
+
+  const runPowerAction = async () => {
+    if (!pendingAction) return;
+    const action = pendingAction;
+    setPendingAction(null);
+    await performPowerAction(action);
+  };
+
+  const requestPowerAction = (action: PowerAction) => {
+    if (preferences.confirm_power_actions) setPendingAction(action);
+    else void performPowerAction(action);
+  };
+
+  const openSettingsWindow = async () => {
+    try { await invoke("open_settings_window"); }
+    catch (error) { notify(`Could not open settings: ${String(error)}`); }
   };
 
   const handleClickCapture = (event: MouseEvent<HTMLElement>) => {
@@ -129,26 +222,36 @@ export default function App() {
         keyboardLayouts={controls.keyboard_layouts}
         currentKeyboardLayout={controls.current_keyboard_layout}
         onSelectKeyboardLayout={setKeyboardLayout}
-        theme={theme}
-        setTheme={setTheme}
-        powerEnabled={powerEnabled}
-        setPowerEnabled={setPowerEnabled}
-        onResizeWindow={() => void resizeWindowForDebug()}
-        onRequestPowerAction={setPendingAction}
+        theme={preferences.theme}
+        accent={accent}
+        powerEnabled={preferences.power_enabled}
+        onTogglePowerEnabled={() => persistPreferences({ ...preferences, power_enabled: !preferences.power_enabled })}
+        onOpenSettings={() => void openSettingsWindow()}
+        onRequestPowerAction={requestPowerAction}
       />
     ),
-    deck: <LauncherScreen onLaunch={(index) => void launchApplication(index)} />,
+    deck: <LauncherScreen
+      apps={launcherApps}
+      theme={preferences.theme}
+      accent={accent}
+      editing={launcherEditing}
+      onEdit={() => setLauncherEditing(true)}
+      onDone={() => setLauncherEditing(false)}
+      onLaunch={(id) => void launchApplication(id)}
+      onPickApp={() => void pickLauncherApp()}
+      onRemove={removeLauncherApp}
+    />,
     gauges: (
       <GaugesScreen
         metrics={metrics}
         history={history}
-        light={theme === "light"}
+        light={preferences.theme === "light"}
       />
     ),
   };
 
   return (
-    <div className={`app-shell theme-${theme}`}>
+    <div className={`app-shell theme-${preferences.theme}`} style={{ "--accent": accent } as CSSProperties}>
       <main
         className="screen-content"
         onPointerDownCapture={feedback.onPointerDownCapture}

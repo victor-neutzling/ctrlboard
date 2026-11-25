@@ -1,18 +1,19 @@
 .app-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--launcher-columns, 3), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--launcher-rows, 2), minmax(0, 1fr));
   gap: var(--panel-gap);
   width: 100%;
   height: 100%;
   min-height: 0;
 }
 .deck-screen {
-  height: 100%;
+  min-height: 100%;
   width: 100%;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
+  position: relative;
 }
 .app-card {
   position: relative;
@@ -21,9 +22,9 @@
   border-radius: var(--panel-radius);
   background: linear-gradient(
     150deg,
-    rgba(53, 65, 83, 0.75),
-    rgba(27, 34, 45, 0.94) 55%,
-    rgba(20, 26, 35, 0.98)
+    color-mix(in srgb, var(--accent) 14%, rgba(43, 44, 47, 0.78)),
+    color-mix(in srgb, var(--accent) 8%, rgba(25, 26, 28, 0.96)) 55%,
+    color-mix(in srgb, var(--accent) 5%, rgba(17, 18, 20, 0.99))
   );
   box-shadow:
     0 10px 20px #05080d4d,
@@ -42,6 +43,33 @@
     box-shadow 0.12s;
   touch-action: manipulation;
 }
+.launcher-card-wrap { position: relative; min-width: 0; min-height: 0; }
+.launcher-card-wrap .app-card { width: 100%; height: 100%; }
+.app-icon { width: clamp(34px, 10vh, 64px); height: clamp(34px, 10vh, 64px); flex: 0 0 auto; font-size: clamp(22px, 5.5vh, 37px); }
+.app-icon img, .launcher-option-icon img { width: 100%; height: 100%; object-fit: contain; }
+.app-icon img { padding: 8px; }
+.launcher-icon { overflow: hidden; }
+.app-add { border: 1px dashed color-mix(in srgb, var(--accent) 58%, var(--panel-border)); background: color-mix(in srgb, var(--accent) 7%, transparent); color: var(--text); }
+.app-add-icon { display: grid; place-items: center; width: clamp(34px, 10vh, 64px); height: clamp(34px, 10vh, 64px); margin-bottom: 7px; border-radius: 18px; color: var(--accent); font-size: clamp(32px, 7vh, 48px); font-weight: 300; line-height: 1; }
+.app-remove { position: absolute; z-index: 4; top: -8px; left: -8px; width: 32px; height: 32px; border: 2px solid #fff; border-radius: 50%; background: #e54b52; color: white; font-size: 25px; font-weight: 700; line-height: 22px; box-shadow: 0 3px 9px #0008; cursor: pointer; }
+.launcher-editing .launcher-card-wrap { animation: launcher-wiggle 180ms ease-in-out infinite alternate; }
+.launcher-editing .launcher-card-wrap:nth-child(even) { animation-delay: -130ms; }
+@keyframes launcher-wiggle { from { transform: rotate(-1.1deg); } to { transform: rotate(1.1deg); } }
+.launcher-empty { grid-column: 1 / -1; align-self: center; justify-self: center; max-width: 340px; margin: 0; padding: 18px; border: 1px dashed var(--panel-border); border-radius: 16px; background: var(--surface); color: var(--muted); text-align: center; line-height: 1.5; cursor: pointer; }
+.launcher-empty strong { display: block; margin-top: 6px; color: var(--accent); }
+.launcher-modal-layer { --panel-border: color-mix(in srgb, var(--accent) 16%, rgba(190, 195, 202, 0.17)); --text: #e9edf3; --muted: #a4adba; --surface: color-mix(in srgb, var(--accent) 9%, #1b1c20); --surface-hi: color-mix(in srgb, var(--accent) 13%, #28292c); --surface-low: color-mix(in srgb, var(--accent) 6%, #141518); position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 18px; isolation: isolate; color: var(--text); color-scheme: dark; }
+.launcher-modal-layer::before { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; background: rgba(255, 255, 255, 0.012); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.launcher-modal-layer.theme-light { --panel-border: #aab8ca70; --text: #252d3a; --muted: #7a8593; --surface: #f6f8fb; --surface-hi: #fff; --surface-low: #e9edf3; color-scheme: light; }
+.launcher-modal-layer.theme-contrast { --panel-border: rgba(255, 255, 255, 0.16); --text: #f7f8fb; --muted: #aeb5c1; --surface: #101115; --surface-hi: #202126; --surface-low: #050506; }
+.launcher-modal.settings-panel { position: relative; z-index: 1; width: min(480px, 100%); max-height: min(80vh, 500px); display: flex; flex-direction: column; gap: 14px; overflow: hidden; padding: 18px; border: 1px solid var(--panel-border); border-radius: 18px; background: linear-gradient(140deg, color-mix(in srgb, var(--accent) 14%, rgba(42, 43, 46, 0.98)), color-mix(in srgb, var(--accent) 7%, rgba(19, 20, 22, 0.99))); box-shadow: 0 14px 38px #0009, inset 0 1px #ffffff20; color: var(--text); }
+.launcher-modal-layer.theme-light .launcher-modal.settings-panel { background: linear-gradient(140deg, #fff, #f1f4f8); box-shadow: 0 14px 38px #40536e2b, inset 0 1px #fff; }
+.launcher-modal-layer.theme-contrast .launcher-modal.settings-panel { background: linear-gradient(145deg, rgba(34, 36, 42, 0.98), rgba(12, 13, 16, 0.99) 60%, #050506); border-color: rgba(255, 255, 255, 0.17); }
+.launcher-modal h2 { margin: 0; font-size: 18px; }
+.launcher-modal-message { margin: 0; color: var(--muted); line-height: 1.5; }
+.launcher-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.launcher-secondary, .launcher-danger { min-height: 48px; min-width: 100px; padding: 0 16px; border: 1px solid var(--panel-border); border-radius: 12px; background: var(--surface-hi); color: var(--text); font-weight: 700; }
+.launcher-danger { border-color: #e54b5266; background: #a92e38; color: white; }
+@media (prefers-reduced-motion: reduce) { .launcher-editing .launcher-card-wrap { animation: none; } }
 .app-card,
 .controls-screen button:not(.safety-toggle) {
   position: relative;

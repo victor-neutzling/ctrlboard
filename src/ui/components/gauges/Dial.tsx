@@ -70,9 +70,9 @@ export function Dial({
         >
           <defs>
             <radialGradient id={`face-${label}`} cx="40%" cy="28%">
-              <stop offset="0" stopColor={light ? "#f7f9fc" : "#303a49"} />
-              <stop offset=".72" stopColor={light ? "#d6dee8" : "#1b222e"} />
-              <stop offset="1" stopColor={light ? "#aab7c7" : "#121720"} />
+              <stop offset="0" stopColor={light ? "#f7f9fc" : "color-mix(in srgb, var(--accent) 16%, #303236)"} />
+              <stop offset=".72" stopColor={light ? "#d6dee8" : "color-mix(in srgb, var(--accent) 9%, #1b1c20)"} />
+              <stop offset="1" stopColor={light ? "#aab7c7" : "color-mix(in srgb, var(--accent) 5%, #121315)"} />
             </radialGradient>
             <filter
               id={`shadow-${label}`}

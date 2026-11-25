@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emptyMetricHistory, previewMetric } from "../data/previewMetric";
 import type { Metric, MetricHistory } from "../types";
+import type { InstalledApplication } from "../types";
 
 function appendSample(previous: number[], value: number | null): number[] {
   return value == null ? previous : [...previous.slice(-35), value];
@@ -11,11 +12,11 @@ export function useSystemMetrics() {
   const [metrics, setMetrics] = useState<Metric>(previewMetric);
   const [history, setHistory] = useState<MetricHistory>(emptyMetricHistory);
   const [isNative, setIsNative] = useState(false);
-  const [installedApps, setInstalledApps] = useState<string[]>([]);
+  const [installedApps, setInstalledApps] = useState<InstalledApplication[]>([]);
 
   useEffect(() => {
     let active = true;
-    void invoke<string[]>("list_applications")
+    void invoke<InstalledApplication[]>("list_applications")
       .then((apps) => {
         if (!active) return;
         setIsNative(true);

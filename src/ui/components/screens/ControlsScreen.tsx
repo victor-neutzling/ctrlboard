@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { CSSProperties, Dispatch, SetStateAction } from "react";
+import type { CSSProperties } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { ControlPopover } from "../ControlPopover";
 import { useLongPress } from "../../hooks/useLongPress";
@@ -26,10 +26,10 @@ type Props = {
   currentKeyboardLayout: number | null;
   onSelectKeyboardLayout: (index: number) => void;
   theme: Theme;
-  setTheme: Dispatch<SetStateAction<Theme>>;
+  accent: string;
   powerEnabled: boolean;
-  setPowerEnabled: Dispatch<SetStateAction<boolean>>;
-  onResizeWindow: () => void;
+  onTogglePowerEnabled: () => void;
+  onOpenSettings: () => void;
   onRequestPowerAction: (action: PowerAction) => void;
 };
 
@@ -47,10 +47,10 @@ export function ControlsScreen({
   currentKeyboardLayout,
   onSelectKeyboardLayout,
   theme,
-  setTheme,
+  accent,
   powerEnabled,
-  setPowerEnabled,
-  onResizeWindow,
+  onTogglePowerEnabled,
+  onOpenSettings,
   onRequestPowerAction,
 }: Props) {
   const displayedVolume = volume ?? 0;
@@ -169,14 +169,6 @@ export function ControlsScreen({
               <p className="control-empty">No audio outputs detected</p>
             )}
           </div>
-          <button
-            type="button"
-            className="debug-resize-button"
-            onClick={() => void onResizeWindow()}
-            aria-label="Debug: resize window to 1024 by 600"
-          >
-            DEBUG · 1024 × 600
-          </button>
         </article>
 
         <article className="settings-panel">
@@ -203,37 +195,11 @@ export function ControlsScreen({
           </div>
         </article>
 
-        <article className="settings-panel appearance-panel">
-          <h2>Appearance</h2>
-          <div className="appearance-options">
-            <button
-              className={`appearance-key ${theme === "light" ? "selected" : ""}`}
-              onClick={() => setTheme("light")}
-              aria-pressed={theme === "light"}
-            >
-              <span aria-hidden="true">☼</span> Light
-            </button>
-            <button
-              className={`appearance-key ${theme === "dark" ? "selected" : ""}`}
-              onClick={() => setTheme("dark")}
-              aria-pressed={theme === "dark"}
-            >
-              <span aria-hidden="true">☾</span> Dark
-            </button>
-            <button
-              className={`appearance-key ${theme === "contrast" ? "selected" : ""}`}
-              onClick={() => setTheme("contrast")}
-              aria-pressed={theme === "contrast"}
-            >
-              <span aria-hidden="true">◐</span> Midnight
-            </button>
-          </div>
-        </article>
-
         <article className="settings-panel power-panel">
           <div className="power-heading">
             <h2>Power</h2>
-            <button
+            <div className="power-heading-actions">
+              <button
               type="button"
               className="safety-toggle"
               role="switch"
@@ -243,12 +209,19 @@ export function ControlsScreen({
                   ? "Disable power actions"
                   : "Enable power actions"
               }
-              onClick={() => setPowerEnabled((enabled) => !enabled)}
+              onClick={onTogglePowerEnabled}
             >
               <span className="toggle-track" aria-hidden="true" />
-            </button>
+              </button>
+            </div>
           </div>
           <div className="power-actions">
+            <button type="button" className="power-action settings-power-action" onClick={onOpenSettings} aria-label="Open application settings" title="Settings">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.2-2-3.4-2.2 1a7.6 7.6 0 0 0-2.6-1.5L14.3 3h-4.6l-.3 2.4a7.6 7.6 0 0 0-2.6 1.5l-2.2-1-2 3.4 2 1.2a7.6 7.6 0 0 0 0 3l-2 1.2 2 3.4 2.2-1a7.6 7.6 0 0 0 2.6 1.5l.3 2.4h4.6l.3-2.4a7.6 7.6 0 0 0 2.6-1.5l2.2 1 2-3.4-2-1.2Z" />
+                <circle cx="12" cy="12" r="3.2" />
+              </svg>
+            </button>
             {(
               [
                 ["logout", "Log out"],
@@ -298,6 +271,7 @@ export function ControlsScreen({
         <ControlPopover
           anchor={popover.anchor}
           theme={theme}
+          accent={accent}
           title={popover.kind === "applications" ? "Application volume" : `${popover.section} settings`}
           onClose={() => setPopover(null)}
         >

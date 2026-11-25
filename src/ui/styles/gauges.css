@@ -26,7 +26,7 @@
   gap: var(--panel-gap);
 }
 .gauge-card {
-  --gauge-accent: #5bbcff;
+  --gauge-accent: var(--accent);
   width: 100%;
   max-width: none;
   min-width: 0;
@@ -38,9 +38,9 @@
   justify-self: center;
   background: linear-gradient(
     145deg,
-    rgba(53, 65, 81, 0.64),
-    rgba(28, 35, 46, 0.92) 55%,
-    rgba(20, 26, 35, 0.98)
+    color-mix(in srgb, var(--accent) 14%, rgba(42, 43, 46, 0.78)),
+    color-mix(in srgb, var(--accent) 8%, rgba(23, 24, 26, 0.94)) 55%,
+    color-mix(in srgb, var(--accent) 5%, rgba(16, 17, 19, 0.99))
   );
   border: 1px solid var(--panel-border);
   box-shadow:
@@ -69,7 +69,7 @@
   padding: var(--panel-padding);
   border: 1px solid var(--panel-border);
   border-radius: var(--panel-radius);
-  background: linear-gradient(145deg, #273141, #171e29);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 12%, #27282b), color-mix(in srgb, var(--accent) 6%, #17181a));
   box-shadow:
     0 7px 15px #05080d30,
     inset 0 1px #ffffff14;
@@ -174,14 +174,14 @@
   overflow: visible;
 }
 .bezel-outer {
-  fill: #283342;
-  stroke: #9aaac0;
+  fill: color-mix(in srgb, var(--accent) 14%, #28292c);
+  stroke: color-mix(in srgb, var(--accent) 12%, #9aa0a7);
   stroke-width: 1.4;
   filter: drop-shadow(0 2px 1px #03060b);
 }
 .bezel-inner {
-  fill: #161c26;
-  stroke: #647389;
+  fill: color-mix(in srgb, var(--accent) 7%, #161719);
+  stroke: color-mix(in srgb, var(--accent) 10%, #64676c);
   stroke-width: 1.4;
 }
 .theme-light .bezel-outer {
@@ -238,13 +238,13 @@
   fill: #ffe0cd;
 }
 .hub-ring {
-  fill: #242d3b;
-  stroke: #7e8da2;
+  fill: color-mix(in srgb, var(--accent) 14%, #242528);
+  stroke: color-mix(in srgb, var(--accent) 11%, #7e8085);
   stroke-width: 1;
 }
 .hub {
-  fill: #bcc9d9;
-  stroke: #141a22;
+  fill: #bcbec2;
+  stroke: color-mix(in srgb, var(--accent) 10%, #141516);
   stroke-width: 2;
 }
 .dial-reading {

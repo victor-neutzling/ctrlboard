@@ -1,8 +1,13 @@
 import { useRef } from "react";
 import type { PointerEvent } from "react";
+import { playLongPressSound, primeAudioFeedback } from "../audioFeedback";
 
-const HOLD_DELAY_MS = 560;
+let holdDelayMs = 560;
 const MOVE_TOLERANCE_PX = 12;
+
+export function setLongPressDuration(durationMs: number) {
+  holdDelayMs = Math.max(300, Math.min(1200, durationMs));
+}
 
 export function useLongPress<T extends HTMLElement>(onHold: (target: T) => void) {
   const timer = useRef<number | null>(null);
@@ -21,12 +26,14 @@ export function useLongPress<T extends HTMLElement>(onHold: (target: T) => void)
     held.current = false;
     event.currentTarget.removeAttribute("data-long-press-triggered");
     origin.current = { x: event.clientX, y: event.clientY };
+    primeAudioFeedback();
     const target = event.currentTarget;
     timer.current = window.setTimeout(() => {
       held.current = true;
       target.dataset.longPressTriggered = "true";
+      playLongPressSound();
       onHold(target);
-    }, HOLD_DELAY_MS);
+    }, holdDelayMs);
   };
 
   const onPointerMove = (event: PointerEvent<T>) => {

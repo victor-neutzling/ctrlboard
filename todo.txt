@@ -5,8 +5,6 @@
 - prevent it from taking focus when i touch on it, x11/wayland focus hints or whatever that is
 - add fluff
    - custom per-application menus
-   - configurable app slection (hold to delete, click + to add)
-   - configuration page with editable cards, gauges and other configs
-   - system agnostic middleware (maybe not lol)
-   - hold for more options (hold audio mute for per-application audio mixer, etc.)
+   - gauge page compact mode
+   - timer
    - more!
