@@ -1,12 +1,12 @@
 # Ctrlboard
 
-Ctrlboard is a small Linux desktop control panel built for touch and mouse use. It combines an app launcher, system gauges, and quick controls for audio, display brightness, keyboard layouts, and power actions. It is an early, in-progress project rather than a packaged release.
+Ctrlboard is a small Linux desktop control panel built for touchscreens. It combines an app launcher, system gauges, and quick controls for audio, display brightness, keyboard layouts, and power actions. It is an early, in-progress project rather than a packaged release.
 
 ## Run from source
 
 ### Requirements
 
-- Linux with a graphical desktop session (GNOME and KDE Plasma have the most desktop integrations).
+- Linux (should work on any distro with gnome or kde).
 - Node.js and npm.
 - Rust and Cargo (install with [rustup](https://rustup.rs/)).
 - Tauri's Linux development libraries. On Ubuntu or Debian, install them with:
@@ -14,6 +14,12 @@ Ctrlboard is a small Linux desktop control panel built for touch and mouse use. 
   ```sh
   sudo apt update
   sudo apt install build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf libwebkit2gtk-4.1-dev
+  ```
+
+  On Fedora, install the equivalent packages with:
+
+  ```sh
+  sudo dnf install gcc-c++ make curl wget file openssl-devel gtk3-devel libappindicator-gtk3-devel librsvg2-devel libwebkit2gtk4.1-devel
   ```
 
   Other distributions need the equivalent WebKitGTK 4.1, GTK, AppIndicator, librsvg, and build packages. See the [Tauri Linux prerequisites](https://v2.tauri.app/start/prerequisites/#linux) for distro-specific package names.
