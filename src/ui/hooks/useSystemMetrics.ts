@@ -21,6 +21,7 @@ export function useSystemMetrics() {
         if (!active) return;
         setIsNative(true);
         setInstalledApps(apps);
+        setMetrics((previous) => ({ ...previous, fps: null }));
       })
       .catch(() => undefined);
 

@@ -1,5 +1,11 @@
 use serde::{Deserialize, Serialize};
-use std::{fs, path::Path, sync::Mutex};
+use std::{
+    fs,
+    io::{Read, Seek, SeekFrom},
+    path::{Path, PathBuf},
+    sync::Mutex,
+    time::{Duration, SystemTime},
+};
 use tauri::{Emitter, Manager};
 
 mod system_controls;
@@ -14,6 +20,65 @@ struct Metrics {
     disk_read_bytes_sec: Option<f64>,
     disk_write_bytes_sec: Option<f64>,
     fps: Option<f64>,
+}
+
+fn mangohud_log_directory() -> PathBuf {
+    std::env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share")))
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("MangoHud")
+}
+
+fn ensure_mangohud_log_directory() -> Result<(), String> {
+    let directory = mangohud_log_directory();
+    fs::create_dir_all(&directory)
+        .map_err(|error| format!("Could not prepare MangoHud log folder: {error}"))?;
+    Ok(())
+}
+
+#[tauri::command]
+fn get_mangohud_log_directory() -> String {
+    mangohud_log_directory().to_string_lossy().into_owned()
+}
+
+fn recent_mangohud_fps() -> Option<f64> {
+    let directory = mangohud_log_directory();
+    let cutoff = SystemTime::now().checked_sub(Duration::from_secs(8))?;
+    let latest = fs::read_dir(directory)
+        .ok()?
+        .flatten()
+        .filter_map(|entry| {
+            let path = entry.path();
+            let name = path.file_name()?.to_string_lossy();
+            if path.extension().and_then(|extension| extension.to_str()) != Some("csv")
+                || name.ends_with("_summary.csv")
+            {
+                return None;
+            }
+            let modified = entry.metadata().ok()?.modified().ok()?;
+            (modified >= cutoff).then_some((modified, path))
+        })
+        .max_by_key(|(modified, _)| *modified)?
+        .1;
+
+    // MangoHud appends one sample per log interval. Read only the tail so a
+    // long game session does not make each metrics poll reread its full log.
+    const MAX_TAIL_BYTES: u64 = 64 * 1024;
+    let mut file = fs::File::open(latest).ok()?;
+    let length = file.metadata().ok()?.len();
+    file.seek(SeekFrom::Start(length.saturating_sub(MAX_TAIL_BYTES)))
+        .ok()?;
+    let mut tail = Vec::with_capacity(length.min(MAX_TAIL_BYTES) as usize);
+    file.read_to_end(&mut tail).ok()?;
+    String::from_utf8_lossy(&tail)
+        .lines()
+        .rev()
+        .filter_map(|line| {
+            let value = line.split(',').next()?.trim().trim_matches('"').parse::<f64>().ok()?;
+            (value.is_finite() && value >= 0.0).then_some(value)
+        })
+        .next()
 }
 
 fn disk_io_counters() -> Option<(u64, u64)> {
@@ -149,7 +214,7 @@ async fn read_metrics() -> Metrics {
         storage_total_gb: storage.map(|v| v.2),
         disk_read_bytes_sec,
         disk_write_bytes_sec,
-        fps: None,
+        fps: recent_mangohud_fps(),
     }
 }
 
@@ -292,7 +357,7 @@ impl Default for AppPreferences {
             theme: "dark".into(),
             visual_style: "glossy".into(),
             accent_color: "blue".into(),
-            visible_gauges: vec!["fps".into(), "cpu".into(), "gpu".into(), "disk".into()],
+            visible_gauges: vec!["cpu".into(), "gpu".into(), "disk".into()],
             compact_gauge_mode: false,
             sound_enabled: true,
             sound_volume: 65,
@@ -326,7 +391,11 @@ fn read_preferences(app: &tauri::AppHandle) -> Result<AppPreferences, String> {
 
 #[tauri::command]
 fn load_app_preferences(app: tauri::AppHandle) -> Result<AppPreferences, String> {
-    read_preferences(&app)
+    let preferences = read_preferences(&app)?;
+    if preferences.visible_gauges.iter().any(|gauge| gauge == "fps") {
+        ensure_mangohud_log_directory()?;
+    }
+    Ok(preferences)
 }
 
 #[tauri::command]
@@ -349,6 +418,9 @@ fn save_app_preferences(app: tauri::AppHandle, preferences: AppPreferences) -> R
     let unique_gauges: std::collections::HashSet<_> = preferences.visible_gauges.iter().collect();
     if unique_gauges.len() != preferences.visible_gauges.len() {
         return Err("Visible gauges must be unique".into());
+    }
+    if preferences.visible_gauges.iter().any(|gauge| gauge == "fps") {
+        ensure_mangohud_log_directory()?;
     }
     if !["deck", "gauges", "controls"].contains(&preferences.start_screen.as_str()) {
         return Err("Unknown startup screen".into());
@@ -539,6 +611,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             read_metrics,
+            get_mangohud_log_directory,
             list_applications,
             launch_application,
             load_app_preferences,

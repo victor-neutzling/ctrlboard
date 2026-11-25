@@ -29,7 +29,7 @@ const accents: { id: AccentColor; label: string; color?: string }[] = [
 ];
 
 const gaugeOptions: { id: GaugeId; title: string; detail: string }[] = [
-  { id: "fps", title: "Frames per second", detail: "Current frame rate" },
+  { id: "fps", title: "Frames per second", detail: "Read game frame rate from MangoHud logs" },
   { id: "cpu", title: "CPU", detail: "Processor utilization" },
   { id: "gpu", title: "GPU", detail: "Graphics processor utilization" },
   { id: "disk", title: "Disk", detail: "Storage usage and disk activity" },
@@ -49,6 +49,7 @@ export function SettingsWindow() {
   const [apps, setApps] = useState<InstalledApplication[]>([]);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
+  const [mangohudLogDirectory, setMangohudLogDirectory] = useState("~/.local/share/MangoHud");
 
   useEffect(() => {
     let active = true;
@@ -62,6 +63,7 @@ export function SettingsWindow() {
       setPreferences(stored);
       setApps(installed);
     }).catch((reason: unknown) => setError(`Could not load settings: ${String(reason)}`));
+    void invoke<string>("get_mangohud_log_directory").then((path) => { if (active) setMangohudLogDirectory(path); }).catch(() => undefined);
     void listen<AppPreferences>("preferences-updated", (event) => {
       if (active) setPreferences(event.payload);
     }).then((stop) => { unlisten = stop; });
@@ -90,6 +92,13 @@ export function SettingsWindow() {
     } catch (reason) {
       setError(`Could not save settings: ${String(reason)}`);
     }
+  };
+
+  const setGaugeVisible = async (gaugeId: GaugeId, visible: boolean) => {
+    if (!preferences) return;
+    void save({ visible_gauges: visible
+      ? [...preferences.visible_gauges, gaugeId]
+      : preferences.visible_gauges.filter((id) => id !== gaugeId) });
   };
 
   const chooseApp = async () => {
@@ -134,6 +143,8 @@ export function SettingsWindow() {
 
   if (!preferences) return <main className="settings-window-loading">{error || "Loading settings…"}</main>;
   const accent = accentValue(preferences.accent_color);
+  const fpsConfig = `alpha=0,background_alpha=0,autostart_log=1,log_interval=500,output_folder=${mangohudLogDirectory}`;
+  const fpsLaunchOption = `MANGOHUD_CONFIG='${fpsConfig.replaceAll("'", "'\\''")}' mangohud %command%`;
 
   return (
     <div className={`settings-window theme-${preferences.theme}`} style={{ "--accent": accent } as CSSProperties}>
@@ -183,7 +194,15 @@ export function SettingsWindow() {
         {section === "gauges" && <SettingsGroup title="Gauge screen" description="Choose which gauges appear and how they are arranged.">
           {gaugeOptions.map((gauge) => {
             const checked = preferences.visible_gauges.includes(gauge.id);
-            return <SettingsSwitch key={gauge.id} title={gauge.title} detail={gauge.detail} checked={checked} disabled={checked && preferences.visible_gauges.length === 1} onChange={(value) => void save({ visible_gauges: value ? [...preferences.visible_gauges, gauge.id] : preferences.visible_gauges.filter((id) => id !== gauge.id) })} />;
+            return <div className="gauge-setting" key={gauge.id}>
+              <SettingsSwitch title={gauge.title} detail={gauge.detail} checked={checked} disabled={checked && preferences.visible_gauges.length === 1} onChange={(value) => void setGaugeVisible(gauge.id, value)} />
+              {gauge.id === "fps" && checked && <div className="fps-setup-note" role="note">
+                <strong>Show game FPS on this gauge</strong>
+                <p>Install MangoHud (for example, <code>sudo dnf install mangohud</code> on Fedora or <code>sudo apt install mangohud</code> on Debian/Ubuntu). Then open the game’s <em>Properties → General → Launch Options</em> in Steam and paste this command:</p>
+                <code>{fpsLaunchOption}</code>
+                <small>This keeps MangoHud hidden and starts logging automatically. Only games launched with this option are measured. For Flatpak Steam, MangoHud and access to the log folder must also be available inside the Flatpak.</small>
+              </div>}
+            </div>;
           })}
           <SettingsSwitch title="Compact mode" detail="Hide the graphs and arrange gauges for a small screen. Select a gauge to view its graph." checked={preferences.compact_gauge_mode} onChange={(value) => void save({ compact_gauge_mode: value })} />
         </SettingsGroup>}

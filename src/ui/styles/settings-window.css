@@ -242,6 +242,15 @@
   color: var(--text);
   font: inherit;
 }
+.gauge-setting { min-width: 0; border-bottom: 1px solid var(--settings-border); }
+.gauge-setting:last-of-type { border-bottom: 0; }
+.gauge-setting > .settings-control-row { border-bottom: 0; }
+.fps-setup-note { margin: 0 0 14px 0; padding: 12px; border: 1px solid var(--settings-border); border-radius: 7px; background: var(--settings-bg); }
+.fps-setup-note strong { font-size: 12px; }
+.fps-setup-note p { margin: 5px 0 9px; color: var(--muted); font-size: 12px; }
+.fps-setup-note p code { display: inline; padding: 1px 4px; border-radius: 3px; font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; }
+.fps-setup-note code { display: block; overflow-wrap: anywhere; padding: 9px; border-radius: 5px; background: #111; color: #d7e6f5; font: 11px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; user-select: text; }
+.fps-setup-note small { display: block; margin-top: 8px; color: var(--muted); font-size: 11px; }
 .settings-app-list { display: grid; }
 .settings-app-row {
   display: grid;

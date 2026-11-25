@@ -64,7 +64,7 @@ export const defaultAppPreferences: AppPreferences = {
   theme: "dark",
   visual_style: "glossy",
   accent_color: "blue",
-  visible_gauges: ["fps", "cpu", "gpu", "disk"],
+  visible_gauges: ["cpu", "gpu", "disk"],
   compact_gauge_mode: false,
   sound_enabled: true,
   sound_volume: 65,

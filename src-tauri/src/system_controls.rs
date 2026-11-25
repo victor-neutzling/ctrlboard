@@ -670,6 +670,32 @@ fn set_brightness_value(percent: u8) -> Result<(), String> {
             .and_then(|value| first_number(&value))
             {
                 let target = (maximum as f64 * f64::from(percent) / 100.0).round() as usize;
+                // Plasma's per-display API takes an int32 brightness and a
+                // uint32 OSD hint. `busctl` lets us pass those D-Bus types
+                // explicitly; gdbus's argument parser does not accept the
+                // `int32 N` text used here previously.
+                let target = target.to_string();
+                if command_output(
+                    "busctl",
+                    &[
+                        "--user",
+                        "call",
+                        "org.kde.ScreenBrightness",
+                        &path,
+                        "org.kde.ScreenBrightness.Display",
+                        "SetBrightness",
+                        "iu",
+                        &target,
+                        "1",
+                    ],
+                )
+                .is_ok()
+                {
+                    return Ok(());
+                }
+
+                // Keep the gdbus attempt for installations where busctl is
+                // unavailable, and retain the existing Plasma 5 fallback.
                 let target = format!("int32 {target}");
                 if command_output(
                     "gdbus",
