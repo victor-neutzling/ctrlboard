@@ -38,7 +38,7 @@ export function useScreenSwipe(
     if (event.pointerType === "mouse" && event.button !== 0) return;
 
     const track = trackRef.current;
-    const captureTarget = target?.closest("button") ?? event.currentTarget;
+    const captureTarget = target?.closest("button, [role='button'], [data-long-press-target='true']") ?? event.currentTarget;
     captureTarget.setPointerCapture(event.pointerId);
     const pageIndex = screenOrder.indexOf(screen);
     const { step, origin } = getTrackMetrics(track);

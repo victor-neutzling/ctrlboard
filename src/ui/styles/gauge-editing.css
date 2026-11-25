@@ -1,0 +1,55 @@
+.gauge-edit-wrap {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+.gauge-remove {
+  position: absolute;
+  z-index: 4;
+  top: 3px;
+  left: 3px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #e54b52;
+  color: white;
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 3px 9px #0008;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.gauge-remove:disabled { opacity: .45; cursor: not-allowed; }
+.gauge-add-card {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px dashed color-mix(in srgb, var(--accent) 62%, var(--panel-border));
+  border-radius: var(--panel-radius);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  color: var(--accent);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.gauge-add-card span { font-size: clamp(56px, 10vw, 120px); font-weight: 300; line-height: 1; }
+.compact-gauges-screen .gauge-add-card {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.gauge-editing .gauge-edit-wrap > .gauge-card { animation: gauge-wiggle 180ms ease-in-out infinite alternate; }
+.gauge-editing .gauge-edit-wrap:nth-child(even) > .gauge-card { animation-delay: -130ms; }
+.gauge-editing .gauge-card { cursor: pointer; }
+@keyframes gauge-wiggle { from { transform: rotate(-1deg); } to { transform: rotate(1deg); } }
+@media (prefers-reduced-motion: reduce) { .gauge-editing .gauge-edit-wrap > .gauge-card { animation: none; } }

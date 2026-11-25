@@ -1,5 +1,7 @@
 export type Screen = "gauges" | "deck" | "controls";
 export type Theme = "light" | "dark" | "contrast";
+export type VisualStyle = "glossy" | "flat";
+export type GaugeId = "fps" | "cpu" | "gpu" | "disk";
 export type AccentColor = "system" | "blue" | "teal" | "green" | "amber" | "orange" | "red" | "pink" | "purple" | "slate";
 export type PowerAction = "logout" | "lock" | "shutdown" | "restart";
 
@@ -34,7 +36,10 @@ export type Application = {
 export type AppPreferences = {
   initialized: boolean;
   theme: Theme;
+  visual_style: VisualStyle;
   accent_color: AccentColor;
+  visible_gauges: GaugeId[];
+  compact_gauge_mode: boolean;
   sound_enabled: boolean;
   sound_volume: number;
   long_press_duration_ms: number;
@@ -57,7 +62,10 @@ export type InstalledApplication = {
 export const defaultAppPreferences: AppPreferences = {
   initialized: false,
   theme: "dark",
+  visual_style: "glossy",
   accent_color: "blue",
+  visible_gauges: ["fps", "cpu", "gpu", "disk"],
+  compact_gauge_mode: false,
   sound_enabled: true,
   sound_volume: 65,
   long_press_duration_ms: 560,

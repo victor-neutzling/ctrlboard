@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { ControlPopover } from "../ControlPopover";
 import { useLongPress } from "../../hooks/useLongPress";
-import type { PowerAction, Theme } from "../../types";
+import type { PowerAction, Theme, VisualStyle } from "../../types";
 import type { ApplicationVolume, AudioOutput, KeyboardLayout } from "../../types";
 
 type OpenPopover = {
@@ -26,6 +26,7 @@ type Props = {
   currentKeyboardLayout: number | null;
   onSelectKeyboardLayout: (index: number) => void;
   theme: Theme;
+  visualStyle: VisualStyle;
   accent: string;
   powerEnabled: boolean;
   onTogglePowerEnabled: () => void;
@@ -47,6 +48,7 @@ export function ControlsScreen({
   currentKeyboardLayout,
   onSelectKeyboardLayout,
   theme,
+  visualStyle,
   accent,
   powerEnabled,
   onTogglePowerEnabled,
@@ -271,12 +273,16 @@ export function ControlsScreen({
         <ControlPopover
           anchor={popover.anchor}
           theme={theme}
+          visualStyle={visualStyle}
           accent={accent}
           title={popover.kind === "applications" ? "Application volume" : `${popover.section} settings`}
           onClose={() => setPopover(null)}
         >
           {popover.kind === "applications" ? (
-            <ApplicationVolumeControls />
+            <>
+              <MediaTransportControls />
+              <ApplicationVolumeControls />
+            </>
           ) : (
             <SettingsShortcut
               section={popover.section!}
@@ -286,6 +292,38 @@ export function ControlsScreen({
         </ControlPopover>
       )}
     </section>
+  );
+}
+
+function MediaTransportControls() {
+  const [message, setMessage] = useState("");
+  const control = async (action: "previous" | "play-pause" | "next" | "stop") => {
+    setMessage("");
+    try {
+      await invoke("control_media_player", { action });
+    } catch (error) {
+      setMessage(String(error));
+    }
+  };
+  const actions = [
+    { id: "previous", label: "Previous track", icon: <><path d="M6 5v14"/><path d="m19 5-10 7 10 7V5Z"/></> },
+    { id: "play-pause", label: "Play or pause", icon: <><path d="m8 5 12 7-12 7V5Z"/><path d="M4 5v14"/></> },
+    { id: "next", label: "Next track", icon: <><path d="M18 5v14"/><path d="m5 5 10 7-10 7V5Z"/></> },
+    { id: "stop", label: "Stop playback", icon: <rect x="6" y="6" width="12" height="12" rx="1"/> },
+  ] as const;
+
+  return (
+    <div className="media-transport">
+      <div className="media-transport-buttons" aria-label="Media playback controls">
+        {actions.map(({ id, label, icon }) => (
+          <button type="button" className="media-transport-button" key={id} aria-label={label} title={label}
+            onClick={() => void control(id)}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">{icon}</svg>
+          </button>
+        ))}
+      </div>
+      {message && <p className="popover-message" role="status">{message}</p>}
+    </div>
   );
 }
 

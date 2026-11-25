@@ -6,3 +6,6 @@
 @import "./styles/responsive.css";
 @import "./styles/themes.css";
 @import "./styles/settings-window.css";
+@import "./styles/flat-style.css";
+@import "./styles/compact-gauges.css";
+@import "./styles/gauge-editing.css";

@@ -270,7 +270,10 @@ fn desktop_application(path: &Path) -> Option<InstalledApplication> {
 struct AppPreferences {
     initialized: bool,
     theme: String,
+    visual_style: String,
     accent_color: String,
+    visible_gauges: Vec<String>,
+    compact_gauge_mode: bool,
     sound_enabled: bool,
     sound_volume: u8,
     long_press_duration_ms: u16,
@@ -287,7 +290,10 @@ impl Default for AppPreferences {
         Self {
             initialized: false,
             theme: "dark".into(),
+            visual_style: "glossy".into(),
             accent_color: "blue".into(),
+            visible_gauges: vec!["fps".into(), "cpu".into(), "gpu".into(), "disk".into()],
+            compact_gauge_mode: false,
             sound_enabled: true,
             sound_volume: 65,
             long_press_duration_ms: 560,
@@ -328,8 +334,21 @@ fn save_app_preferences(app: tauri::AppHandle, preferences: AppPreferences) -> R
     if !["light", "dark", "contrast"].contains(&preferences.theme.as_str()) {
         return Err("Unknown appearance mode".into());
     }
+    if !["glossy", "flat"].contains(&preferences.visual_style.as_str()) {
+        return Err("Unknown visual style".into());
+    }
     if !["system", "blue", "teal", "green", "amber", "orange", "red", "pink", "purple", "slate"].contains(&preferences.accent_color.as_str()) {
         return Err("Unknown accent color".into());
+    }
+    if preferences.visible_gauges.is_empty() || preferences.visible_gauges.len() > 4 {
+        return Err("Select at least one gauge".into());
+    }
+    if preferences.visible_gauges.iter().any(|gauge| !["fps", "cpu", "gpu", "disk"].contains(&gauge.as_str())) {
+        return Err("Unknown gauge".into());
+    }
+    let unique_gauges: std::collections::HashSet<_> = preferences.visible_gauges.iter().collect();
+    if unique_gauges.len() != preferences.visible_gauges.len() {
+        return Err("Visible gauges must be unique".into());
     }
     if !["deck", "gauges", "controls"].contains(&preferences.start_screen.as_str()) {
         return Err("Unknown startup screen".into());
@@ -361,16 +380,29 @@ fn save_app_preferences(app: tauri::AppHandle, preferences: AppPreferences) -> R
 }
 
 #[tauri::command]
-fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
+fn open_settings_window(app: tauri::AppHandle, section: Option<String>) -> Result<(), String> {
+    if section.as_deref().is_some_and(|value| {
+        !["appearance", "feedback", "controls", "gauges", "launcher", "display", "about"].contains(&value)
+    }) {
+        return Err("Unknown settings section".into());
+    }
     if let Some(window) = app.get_webview_window("settings") {
         let _ = window.show();
         let _ = window.set_focus();
+        if let Some(section) = section {
+            app.emit_to("settings", "settings-navigate", section)
+                .map_err(|error| format!("Could not navigate to settings section: {error}"))?;
+        }
         return Ok(());
     }
+    let url = section.map_or_else(
+        || "index.html?window=settings".to_owned(),
+        |section| format!("index.html?window=settings&section={section}"),
+    );
     tauri::WebviewWindowBuilder::new(
         &app,
         "settings",
-        tauri::WebviewUrl::App("index.html?window=settings".into()),
+        tauri::WebviewUrl::App(url.into()),
     )
     .title("Ctrlboard Settings")
     .inner_size(980.0, 720.0)
@@ -517,6 +549,7 @@ pub fn run() {
             system_controls::read_system_controls,
             system_controls::set_audio_volume,
             system_controls::set_audio_muted,
+            system_controls::control_media_player,
             system_controls::read_application_volumes,
             system_controls::set_application_volume,
             system_controls::open_system_settings,

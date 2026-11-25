@@ -18,7 +18,7 @@ import { useDesktopControls } from "./hooks/useDesktopControls";
 import { useScreenSwipe } from "./hooks/useScreenSwipe";
 import { useSystemMetrics } from "./hooks/useSystemMetrics";
 import { defaultAppPreferences } from "./types";
-import type { AppPreferences, PowerAction, Screen } from "./types";
+import type { AppPreferences, GaugeId, PowerAction, Screen } from "./types";
 
 export default function App() {
   if (isTauri() && getCurrentWindow().label === "settings") return <SettingsWindow />;
@@ -31,6 +31,7 @@ function Dashboard() {
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [toast, setToast] = useState("");
   const [launcherEditing, setLauncherEditing] = useState(false);
+  const [gaugeEditing, setGaugeEditing] = useState(false);
   const [pendingAction, setPendingAction] = useState<PowerAction | null>(null);
   const screenTrackRef = useRef<HTMLDivElement>(null);
 
@@ -124,6 +125,10 @@ function Dashboard() {
 
   const addLauncherApp = (id: string) => persistPreferences({ ...preferences, launcher_app_ids: Array.from(new Set([...preferences.launcher_app_ids, id])) });
   const removeLauncherApp = (id: string) => persistPreferences({ ...preferences, launcher_app_ids: preferences.launcher_app_ids.filter((item) => item !== id) });
+  const removeGauge = (id: GaugeId) => {
+    const visibleGauges = preferences.visible_gauges.filter((item) => item !== id);
+    if (visibleGauges.length > 0) persistPreferences({ ...preferences, visible_gauges: visibleGauges });
+  };
   const pickLauncherApp = async () => {
     if (!isNative) {
       notify("The native app selector is available in the desktop app");
@@ -183,8 +188,8 @@ function Dashboard() {
     else void performPowerAction(action);
   };
 
-  const openSettingsWindow = async () => {
-    try { await invoke("open_settings_window"); }
+  const openSettingsWindow = async (section?: string) => {
+    try { await invoke("open_settings_window", { section: section ?? null }); }
     catch (error) { notify(`Could not open settings: ${String(error)}`); }
   };
 
@@ -223,6 +228,7 @@ function Dashboard() {
         currentKeyboardLayout={controls.current_keyboard_layout}
         onSelectKeyboardLayout={setKeyboardLayout}
         theme={preferences.theme}
+        visualStyle={preferences.visual_style}
         accent={accent}
         powerEnabled={preferences.power_enabled}
         onTogglePowerEnabled={() => persistPreferences({ ...preferences, power_enabled: !preferences.power_enabled })}
@@ -233,6 +239,7 @@ function Dashboard() {
     deck: <LauncherScreen
       apps={launcherApps}
       theme={preferences.theme}
+      visualStyle={preferences.visual_style}
       accent={accent}
       editing={launcherEditing}
       onEdit={() => setLauncherEditing(true)}
@@ -246,12 +253,23 @@ function Dashboard() {
         metrics={metrics}
         history={history}
         light={preferences.theme === "light"}
+        visibleGauges={preferences.visible_gauges}
+        compactMode={preferences.compact_gauge_mode}
+        active={screen === "gauges"}
+        theme={preferences.theme}
+        visualStyle={preferences.visual_style}
+        accent={accent}
+        editing={gaugeEditing}
+        onEdit={() => setGaugeEditing(true)}
+        onDone={() => setGaugeEditing(false)}
+        onRemoveGauge={removeGauge}
+        onOpenGaugeSettings={() => { setGaugeEditing(false); void openSettingsWindow("gauges"); }}
       />
     ),
   };
 
   return (
-    <div className={`app-shell theme-${preferences.theme}`} style={{ "--accent": accent } as CSSProperties}>
+    <div className={`app-shell theme-${preferences.theme} style-${preferences.visual_style}`} style={{ "--accent": accent } as CSSProperties}>
       <main
         className="screen-content"
         onPointerDownCapture={feedback.onPointerDownCapture}
@@ -266,7 +284,7 @@ function Dashboard() {
           {(["controls", "deck", "gauges"] as Screen[]).map((page) => (
             <div
               key={page}
-              className="screen-page"
+              className={`screen-page ${page === "gauges" ? "gauge-screen-page" : ""}`}
               aria-hidden={screen !== page}
               inert={screen !== page}
             >

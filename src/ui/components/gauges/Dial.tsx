@@ -1,4 +1,7 @@
 import type { CSSProperties } from "react";
+import type { useLongPress } from "../../hooks/useLongPress";
+
+type HoldHandlers = ReturnType<typeof useLongPress<HTMLElement>>;
 
 export function Dial({
   label,
@@ -9,6 +12,9 @@ export function Dial({
   light,
   reading,
   unavailable = false,
+  onClick,
+  className,
+  holdHandlers,
 }: {
   label: string;
   value: number | null;
@@ -18,6 +24,9 @@ export function Dial({
   light: boolean;
   reading?: string;
   unavailable?: boolean;
+  onClick?: () => void;
+  className?: string;
+  holdHandlers?: HoldHandlers;
 }) {
   const shown = value == null ? 0 : Math.max(0, Math.min(range, value));
   const angle = -135 + (shown / range) * 270;
@@ -54,7 +63,19 @@ export function Dial({
   });
   return (
     <article
-      className={`gauge-card ${unavailable ? "is-offline" : ""}`}
+      className={`gauge-card ${unavailable ? "is-offline" : ""} ${className ?? ""} ${onClick ? "gauge-interactive" : ""}`}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? `${label} gauge` : undefined}
+      data-long-press-target={holdHandlers ? "true" : undefined}
+      {...holdHandlers}
+      onClick={onClick}
+      onKeyDown={onClick ? (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick();
+        }
+      } : undefined}
       style={{ "--gauge-accent": accent } as CSSProperties}
     >
       <div className="gauge-top">

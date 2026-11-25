@@ -950,6 +950,29 @@ pub async fn set_audio_muted(muted: bool) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn control_media_player(action: String) -> Result<(), String> {
+    run_blocking(move || {
+        let command = match action.as_str() {
+            "previous" => "previous",
+            "play-pause" => "play-pause",
+            "next" => "next",
+            "stop" => "stop",
+            _ => return Err("Unsupported media action".to_owned()),
+        };
+        command_output("playerctl", &[command]).map(|_| ()).map_err(|error| {
+            if error.contains("No players found") {
+                "No active media player was found.".to_owned()
+            } else if error.contains("Could not start playerctl") {
+                "Media controls require playerctl (MPRIS), available on GNOME and KDE.".to_owned()
+            } else {
+                format!("Could not control media playback: {error}")
+            }
+        })
+    })
+    .await?
+}
+
+#[tauri::command]
 pub async fn read_application_volumes() -> Result<Vec<ApplicationVolume>, String> {
     run_blocking(read_application_volumes_blocking).await?
 }

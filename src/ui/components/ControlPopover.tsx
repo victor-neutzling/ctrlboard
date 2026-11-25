@@ -7,12 +7,13 @@ type Props = {
   anchor: HTMLElement;
   title: string;
   theme: "light" | "dark" | "contrast";
+  visualStyle: "glossy" | "flat";
   accent: string;
   onClose: () => void;
   children: ReactNode;
 };
 
-export function ControlPopover({ anchor, title, theme, accent, onClose, children }: Props) {
+export function ControlPopover({ anchor, title, theme, visualStyle, accent, onClose, children }: Props) {
   const panel = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<CSSProperties>({ visibility: "hidden" });
   const feedback = useButtonFeedback();
@@ -49,7 +50,7 @@ export function ControlPopover({ anchor, title, theme, accent, onClose, children
 
   return createPortal(
     <div
-      className={`control-popover-layer controls-screen theme-${theme}`}
+      className={`control-popover-layer controls-screen theme-${theme} style-${visualStyle}`}
       style={{ "--accent": accent } as CSSProperties}
       aria-live="polite"
       onPointerDownCapture={feedback.onPointerDownCapture}

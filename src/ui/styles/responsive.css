@@ -31,20 +31,53 @@
     gap: var(--panel-gap);
   }
   .power-actions {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    flex-basis: 60px;
-    height: 60px;
+    min-height: 76px;
+    gap: clamp(8px, 2vw, 16px);
+  }
+  .power-action {
+    width: clamp(56px, 11vw, 68px);
+  }
+  .power-action svg {
+    width: 32px;
+    height: 32px;
+  }
+  .power-action > span {
+    font-size: 32px;
   }
   .gauge-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: repeat(2, minmax(0, 1fr));
   }
+  .gauge-grid[data-count="1"] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .gauge-grid[data-count="2"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .compact-gauge-grid {
+    grid-template-columns: repeat(var(--compact-columns, 2), minmax(0, 1fr));
+    grid-template-rows: repeat(var(--compact-rows, 1), minmax(0, 1fr));
+  }
+  .sparkline-grid[data-count="1"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sparkline-grid[data-count="2"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .sparkline-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: repeat(2, minmax(0, 1fr));
-    flex-basis: 40%;
-    min-height: 180px;
+    flex-basis: 34%;
+    min-height: 0;
   }
+  .single-gauge-screen .gauge-grid,
+  .single-gauge-screen .sparkline-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .single-gauge-screen .sparkline-grid { flex-basis: auto; }
   .gauge-card {
     max-width: none;
   }

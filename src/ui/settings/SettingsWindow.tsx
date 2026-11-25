@@ -3,12 +3,13 @@ import type { CSSProperties, ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open as openNativeFilePicker } from "@tauri-apps/plugin-dialog";
-import type { AccentColor, AppPreferences, InstalledApplication, Screen, Theme } from "../types";
+import type { AccentColor, AppPreferences, GaugeId, InstalledApplication, Screen, Theme } from "../types";
 
 const sections = [
   ["appearance", "Appearance"],
   ["feedback", "Feedback"],
   ["controls", "Controls"],
+  ["gauges", "Gauges"],
   ["launcher", "Launcher"],
   ["display", "Display"],
   ["about", "About"],
@@ -27,13 +28,23 @@ const accents: { id: AccentColor; label: string; color?: string }[] = [
   { id: "slate", label: "Slate", color: "#77899b" },
 ];
 
+const gaugeOptions: { id: GaugeId; title: string; detail: string }[] = [
+  { id: "fps", title: "Frames per second", detail: "Current frame rate" },
+  { id: "cpu", title: "CPU", detail: "Processor utilization" },
+  { id: "gpu", title: "GPU", detail: "Graphics processor utilization" },
+  { id: "disk", title: "Disk", detail: "Storage usage and disk activity" },
+];
+
 export function accentValue(accent: AccentColor): string {
   if (accent === "system") return CSS.supports("color", "AccentColor") ? "AccentColor" : "Highlight";
   return accents.find((choice) => choice.id === accent)?.color ?? "#3988e8";
 }
 
 export function SettingsWindow() {
-  const [section, setSection] = useState<(typeof sections)[number][0]>("appearance");
+  const [section, setSection] = useState<(typeof sections)[number][0]>(() => {
+    const requested = new URLSearchParams(window.location.search).get("section");
+    return sections.find(([id]) => id === requested)?.[0] ?? "appearance";
+  });
   const [preferences, setPreferences] = useState<AppPreferences | null>(null);
   const [apps, setApps] = useState<InstalledApplication[]>([]);
   const [error, setError] = useState("");
@@ -42,6 +53,7 @@ export function SettingsWindow() {
   useEffect(() => {
     let active = true;
     let unlisten: (() => void) | undefined;
+    let unlistenNavigate: (() => void) | undefined;
     void Promise.all([
       invoke<AppPreferences>("load_app_preferences"),
       invoke<InstalledApplication[]>("list_applications"),
@@ -53,7 +65,12 @@ export function SettingsWindow() {
     void listen<AppPreferences>("preferences-updated", (event) => {
       if (active) setPreferences(event.payload);
     }).then((stop) => { unlisten = stop; });
-    return () => { active = false; unlisten?.(); };
+    void listen<string>("settings-navigate", (event) => {
+      if (active && sections.some(([id]) => id === event.payload)) {
+        setSection(event.payload as (typeof sections)[number][0]);
+      }
+    }).then((stop) => { unlistenNavigate = stop; });
+    return () => { active = false; unlisten?.(); unlistenNavigate?.(); };
   }, []);
 
   const selectedApps = useMemo(() => {
@@ -120,18 +137,28 @@ export function SettingsWindow() {
 
   return (
     <div className={`settings-window theme-${preferences.theme}`} style={{ "--accent": accent } as CSSProperties}>
-      <header className="settings-window-header">
-        <div className="settings-brand"><span className="settings-brand-icon">C</span><div><strong>Ctrlboard</strong><small>Settings</small></div></div>
+      <aside className="settings-sidebar">
+        <div className="settings-brand"><strong>Ctrlboard</strong><small>Preferences</small></div>
         <nav className="settings-section-nav" aria-label="Settings sections">
-          {sections.map(([id, label]) => <button key={id} className={section === id ? "active" : ""} onClick={() => setSection(id)}>{label}</button>)}
+          {sections.map(([id, label]) => <button key={id} className={section === id ? "active" : ""} aria-current={section === id ? "page" : undefined} onClick={() => setSection(id)}>{label}</button>)}
         </nav>
-      </header>
+      </aside>
 
       <main className="settings-window-content">
-        <div className="settings-page-heading"><div><p>SETTINGS</p><h1>{sections.find(([id]) => id === section)?.[1]}</h1></div><span role="status">{status}</span></div>
+        <div className="settings-page-heading"><h1>{sections.find(([id]) => id === section)?.[1]}</h1><span role="status">{status}</span></div>
 
         {section === "appearance" && <>
-          <SettingsGroup title="Appearance" description="Choose the colors used throughout Ctrlboard.">
+          <SettingsGroup className="appearance-settings-group" title="Appearance" description="Choose the colors used throughout Ctrlboard.">
+            <fieldset className="settings-fieldset style-fieldset"><legend>Style</legend><div className="style-choices">
+              {([ ["glossy", "Glossy"], ["flat", "Flat"] ] as const).map(([id, label]) => <button key={id} type="button" className={`style-choice ${preferences.visual_style === id ? "selected" : ""}`} onClick={() => void save({ visual_style: id })} aria-pressed={preferences.visual_style === id}>
+                <span className={`style-preview theme-${preferences.theme} preview-${id}`} aria-hidden="true">
+                  <span className="style-preview-toolbar"><i/><i/><i/></span>
+                  <span className="style-preview-content"><i/><i/><i/></span>
+                  <span className="style-preview-actions"><i/><i/><i/><i/></span>
+                </span>
+                <span className="style-choice-label">{label}</span>
+              </button>)}
+            </div></fieldset>
             <fieldset className="settings-fieldset"><legend>Mode</legend><div className="theme-choices">
               {([ ["light", "Light", "☼"], ["dark", "Dark", "☾"], ["contrast", "Midnight", "◐"] ] as const).map(([id, label, icon]) => <button key={id} className={`theme-choice ${preferences.theme === id ? "selected" : ""}`} onClick={() => void save({ theme: id as Theme })} aria-pressed={preferences.theme === id}><span>{icon}</span>{label}</button>)}
             </div></fieldset>
@@ -153,7 +180,15 @@ export function SettingsWindow() {
           <div className="settings-control-row"><div><strong>Startup section</strong><small>Choose the screen shown when Ctrlboard opens.</small></div><select value={preferences.start_screen} onChange={(event) => void save({ start_screen: event.target.value as Screen })}><option value="deck">App launcher</option><option value="gauges">System gauges</option><option value="controls">Controls</option></select></div>
         </SettingsGroup>}
 
-        {section === "launcher" && <SettingsGroup title="App launcher" description="Apps appear in the launcher in this order. You can add up to 12 apps.">
+        {section === "gauges" && <SettingsGroup title="Gauge screen" description="Choose which gauges appear and how they are arranged.">
+          {gaugeOptions.map((gauge) => {
+            const checked = preferences.visible_gauges.includes(gauge.id);
+            return <SettingsSwitch key={gauge.id} title={gauge.title} detail={gauge.detail} checked={checked} disabled={checked && preferences.visible_gauges.length === 1} onChange={(value) => void save({ visible_gauges: value ? [...preferences.visible_gauges, gauge.id] : preferences.visible_gauges.filter((id) => id !== gauge.id) })} />;
+          })}
+          <SettingsSwitch title="Compact mode" detail="Hide the graphs and arrange gauges for a small screen. Select a gauge to view its graph." checked={preferences.compact_gauge_mode} onChange={(value) => void save({ compact_gauge_mode: value })} />
+        </SettingsGroup>}
+
+        {section === "launcher" && <SettingsGroup className="launcher-settings-group" title="App launcher" description="Apps appear in the launcher in this order. You can add up to 12 apps.">
           <div className="settings-app-list">{selectedApps.map((app) => <article className="settings-app-row" key={app.desktop_id}>
             <span className="settings-app-icon">{app.icon ? <img src={app.icon} alt=""/> : app.name.slice(0, 1)}</span>
             <div className="settings-app-info"><strong>{app.name}</strong><small title={app.command}>{app.command || app.desktop_id}</small><small className="settings-app-path" title={app.desktop_path}>{app.desktop_path}</small></div>
@@ -163,7 +198,7 @@ export function SettingsWindow() {
           <p className="settings-hint">The same app list is available from the launcher’s press-and-hold edit mode.</p>
         </SettingsGroup>}
 
-        {section === "display" && <SettingsGroup title="Main window" description="Set the starting size for the touch-screen control panel.">
+        {section === "display" && <SettingsGroup className="display-settings-group" title="Main window" description="Set the starting size for the touch-screen control panel.">
           <div className="settings-size-fields"><label>Width <span>px</span><input type="number" min="640" max="3840" value={preferences.window_width} onChange={(event) => void save({ window_width: Number(event.target.value) })}/></label><span className="size-times">×</span><label>Height <span>px</span><input type="number" min="420" max="2160" value={preferences.window_height} onChange={(event) => void save({ window_height: Number(event.target.value) })}/></label></div>
           <div className="settings-display-actions"><button className="settings-secondary-button" onClick={() => void save({ window_width: 1024, window_height: 600 })}>Reset to 1024 × 600</button><button className="settings-primary-button" onClick={() => void applyWindowSize()}>Apply to main window</button></div>
           <p className="settings-hint">Changes are saved as your next startup size. Applying resizes the open main window now.</p>
@@ -179,10 +214,10 @@ export function SettingsWindow() {
   );
 }
 
-function SettingsGroup({ title, description, children }: { title: string; description: string; children: ReactNode }) {
-  return <section className="settings-group"><div className="settings-group-heading"><h2>{title}</h2><p>{description}</p></div><div className="settings-group-body">{children}</div></section>;
+function SettingsGroup({ title, description, children, className = "" }: { title: string; description: string; children: ReactNode; className?: string }) {
+  return <section className={`settings-group ${className}`}><div className="settings-group-heading"><h2>{title}</h2><p>{description}</p></div><div className="settings-group-body">{children}</div></section>;
 }
 
-function SettingsSwitch({ title, detail, checked, onChange }: { title: string; detail: string; checked: boolean; onChange: (checked: boolean) => void }) {
-  return <div className="settings-control-row"><div><strong>{title}</strong><small>{detail}</small></div><button type="button" className="settings-switch" role="switch" aria-checked={checked} onClick={() => onChange(!checked)} aria-label={title}><span/></button></div>;
+function SettingsSwitch({ title, detail, checked, disabled = false, onChange }: { title: string; detail: string; checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void }) {
+  return <div className="settings-control-row"><div><strong>{title}</strong><small>{detail}</small></div><button type="button" className="settings-switch" role="switch" aria-checked={checked} disabled={disabled} onClick={() => onChange(!checked)} aria-label={title}><span/></button></div>;
 }

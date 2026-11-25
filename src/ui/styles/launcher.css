@@ -52,8 +52,8 @@
 .app-add { border: 1px dashed color-mix(in srgb, var(--accent) 58%, var(--panel-border)); background: color-mix(in srgb, var(--accent) 7%, transparent); color: var(--text); }
 .app-add-icon { display: grid; place-items: center; width: clamp(34px, 10vh, 64px); height: clamp(34px, 10vh, 64px); margin-bottom: 7px; border-radius: 18px; color: var(--accent); font-size: clamp(32px, 7vh, 48px); font-weight: 300; line-height: 1; }
 .app-remove { position: absolute; z-index: 4; top: -8px; left: -8px; width: 32px; height: 32px; border: 2px solid #fff; border-radius: 50%; background: #e54b52; color: white; font-size: 25px; font-weight: 700; line-height: 22px; box-shadow: 0 3px 9px #0008; cursor: pointer; }
-.launcher-editing .launcher-card-wrap { animation: launcher-wiggle 180ms ease-in-out infinite alternate; }
-.launcher-editing .launcher-card-wrap:nth-child(even) { animation-delay: -130ms; }
+.launcher-editing .launcher-card-wrap .app-card { animation: launcher-wiggle 180ms ease-in-out infinite alternate; }
+.launcher-editing .launcher-card-wrap:nth-child(even) .app-card { animation-delay: -130ms; }
 @keyframes launcher-wiggle { from { transform: rotate(-1.1deg); } to { transform: rotate(1.1deg); } }
 .launcher-empty { grid-column: 1 / -1; align-self: center; justify-self: center; max-width: 340px; margin: 0; padding: 18px; border: 1px dashed var(--panel-border); border-radius: 16px; background: var(--surface); color: var(--muted); text-align: center; line-height: 1.5; cursor: pointer; }
 .launcher-empty strong { display: block; margin-top: 6px; color: var(--accent); }
@@ -69,7 +69,7 @@
 .launcher-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 .launcher-secondary, .launcher-danger { min-height: 48px; min-width: 100px; padding: 0 16px; border: 1px solid var(--panel-border); border-radius: 12px; background: var(--surface-hi); color: var(--text); font-weight: 700; }
 .launcher-danger { border-color: #e54b5266; background: #a92e38; color: white; }
-@media (prefers-reduced-motion: reduce) { .launcher-editing .launcher-card-wrap { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .launcher-editing .launcher-card-wrap .app-card { animation: none; } }
 .app-card,
 .controls-screen button:not(.safety-toggle) {
   position: relative;

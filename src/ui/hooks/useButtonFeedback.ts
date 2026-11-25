@@ -1,7 +1,7 @@
 import type { KeyboardEvent, MouseEvent, PointerEvent } from "react";
 import { playClickSound } from "../audioFeedback";
 
-function showRipple(button: HTMLButtonElement, clientX: number, clientY: number) {
+function showRipple(button: HTMLElement, clientX: number, clientY: number) {
   const bounds = button.getBoundingClientRect();
   const x = clientX - bounds.left;
   const y = clientY - bounds.top;
@@ -21,13 +21,13 @@ function showRipple(button: HTMLButtonElement, clientX: number, clientY: number)
   button.append(ripple);
 }
 
-function getFeedbackButton(target: EventTarget | null): HTMLButtonElement | null {
+function getFeedbackTarget(target: EventTarget | null): HTMLElement | null {
   if (!(target instanceof Element)) return null;
-  const button = target.closest("button");
+  const button = target.closest("button, [role='button']");
   return (
-    button instanceof HTMLButtonElement &&
-    !button.disabled &&
-    Boolean(button.closest(".app-card, .controls-screen"))
+    button instanceof HTMLElement &&
+    !(button instanceof HTMLButtonElement && button.disabled) &&
+    Boolean(button.closest(".app-card, .controls-screen, .compact-gauges-screen"))
   )
     ? button
     : null;
@@ -35,25 +35,23 @@ function getFeedbackButton(target: EventTarget | null): HTMLButtonElement | null
 
 export function useButtonFeedback() {
   const onPointerDownCapture = (event: PointerEvent<HTMLElement>) => {
-    const button = getFeedbackButton(event.target);
+    const button = getFeedbackTarget(event.target);
     if (!button) return;
-    showRipple(button, event.clientX, event.clientY);
+    if (button instanceof HTMLButtonElement) showRipple(button, event.clientX, event.clientY);
   };
 
   const onKeyDownCapture = (event: KeyboardEvent<HTMLElement>) => {
     if ((event.key !== "Enter" && event.key !== " ") || event.repeat) return;
-    const button = getFeedbackButton(event.target);
+    const button = getFeedbackTarget(event.target);
     if (!button) return;
-    const bounds = button.getBoundingClientRect();
-    showRipple(
-      button,
-      bounds.left + bounds.width / 2,
-      bounds.top + bounds.height / 2,
-    );
+    if (button instanceof HTMLButtonElement) {
+      const bounds = button.getBoundingClientRect();
+      showRipple(button, bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+    }
   };
 
   const onClickCapture = (event: MouseEvent<HTMLElement>) => {
-    if (getFeedbackButton(event.target)) playClickSound();
+    if (getFeedbackTarget(event.target)) playClickSound();
   };
 
   return { onPointerDownCapture, onKeyDownCapture, onClickCapture };

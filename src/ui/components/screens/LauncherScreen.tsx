@@ -2,11 +2,12 @@ import { memo, useState } from "react";
 import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useLongPress } from "../../hooks/useLongPress";
-import type { InstalledApplication, Theme } from "../../types";
+import type { InstalledApplication, Theme, VisualStyle } from "../../types";
 
 type Props = {
   apps: InstalledApplication[];
   theme: Theme;
+  visualStyle: VisualStyle;
   accent: string;
   editing: boolean;
   onEdit: () => void;
@@ -18,7 +19,7 @@ type Props = {
 
 const MAX_LAUNCHER_APPS = 12;
 
-export const LauncherScreen = memo(function LauncherScreen({ apps, theme, accent, editing, onEdit, onDone, onLaunch, onPickApp, onRemove }: Props) {
+export const LauncherScreen = memo(function LauncherScreen({ apps, theme, visualStyle, accent, editing, onEdit, onDone, onLaunch, onPickApp, onRemove }: Props) {
   const [pendingRemoval, setPendingRemoval] = useState<InstalledApplication | null>(null);
   const hold = useLongPress(() => onEdit());
   const canAddApps = apps.length < MAX_LAUNCHER_APPS;
@@ -44,7 +45,7 @@ export const LauncherScreen = memo(function LauncherScreen({ apps, theme, accent
         </button>}
         {apps.length === 0 && !editing && <button className="launcher-empty" onClick={openAppPicker}>Your launcher is empty. <strong>Tap here to add an app</strong>.</button>}
       </div>
-      {pendingRemoval && createPortal(<div className={`launcher-modal-layer theme-${theme}`} style={{ "--accent": accent } as CSSProperties} onPointerDown={(event) => { if (event.target === event.currentTarget) setPendingRemoval(null); }}>
+      {pendingRemoval && createPortal(<div className={`launcher-modal-layer theme-${theme} style-${visualStyle}`} style={{ "--accent": accent } as CSSProperties} onPointerDown={(event) => { if (event.target === event.currentTarget) setPendingRemoval(null); }}>
         <section className="launcher-modal settings-panel" role="alertdialog" aria-modal="true" aria-label="Remove app">
           <h2>Remove {pendingRemoval.name}?</h2><p className="launcher-modal-message">This removes the app from your launcher. You can add it again at any time.</p>
           <div className="launcher-modal-actions"><button className="launcher-secondary" onClick={() => setPendingRemoval(null)}>Cancel</button><button className="launcher-danger" onClick={() => { onRemove(pendingRemoval.desktop_id); setPendingRemoval(null); }}>Remove</button></div>

@@ -81,7 +81,7 @@ export function playLongPressSound() {
 
   const now = context.currentTime;
   for (const start of [0, 0.105]) {
-    playTone(context, 920, 700, now + start, 0.065, 0.24, "triangle");
-    playTone(context, 440, 360, now + start, 0.06, 0.08, "sine");
+    playTone(context, 760, 560, now + start, 0.065, 0.24, "triangle");
+    playTone(context, 380, 300, now + start, 0.06, 0.08, "sine");
   }
 }

@@ -1,0 +1,40 @@
+.app-shell .compact-gauges-screen .compact-gauge-grid {
+  width: 100%;
+  height: 100%;
+  align-content: stretch;
+  justify-content: stretch;
+}
+.app-shell .compact-gauges-screen .gauge-card,
+.app-shell .compact-gauges-screen .gauge-detail-dial {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+.app-shell .compact-gauges-screen .gauge-card::before { display: none; }
+.app-shell .compact-gauges-screen .gauge-card .gauge-top {
+  padding: 2px 4px 0;
+}
+.app-shell .compact-gauges-screen .gauge-card .dial-wrap {
+  width: min(100%, calc(100cqh - 20px), 600px);
+  flex: 0 1 auto;
+}
+.app-shell .compact-gauges-screen .gauge-card .dial-svg { display: block; }
+.app-shell .compact-gauges-screen .sparkline-axis { min-width: 48px; font-size: 10px; }
+.app-shell .compact-gauges-screen .gauge-card.gauge-interactive {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.app-shell .compact-gauges-screen .gauge-card.gauge-interactive:active {
+  filter: brightness(1.12);
+}
+
+@supports not (width: 1cqh) {
+  .app-shell .compact-gauges-screen .gauge-card .dial-wrap {
+    width: min(100%, 42vh, 520px);
+  }
+}

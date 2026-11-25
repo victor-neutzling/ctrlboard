@@ -386,20 +386,20 @@
   outline-offset: 3px;
 }
 .power-actions {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: flex;
   align-items: center;
-  flex: 0 0 60px;
-  height: 60px;
-  gap: var(--panel-gap);
+  justify-content: center;
+  flex: 0 0 auto;
+  min-height: 88px;
+  gap: clamp(12px, 2vw, 24px);
 }
 .power-action {
   min-width: 0;
-  width: min(100%, 56px);
+  width: clamp(64px, 7.4vw, 78px);
   aspect-ratio: 1;
-  justify-self: center;
+  flex: 0 0 auto;
   min-height: 0;
-  padding: 10px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: 50%;
   background: linear-gradient(145deg, var(--surface-hi), var(--surface));
@@ -420,12 +420,12 @@
     opacity 0.12s;
 }
 .power-action > span {
-  font-size: 30px;
+  font-size: 36px;
   line-height: 1;
 }
 .power-action svg {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
