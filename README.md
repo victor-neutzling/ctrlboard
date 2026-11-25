@@ -39,6 +39,10 @@ This starts Vite and opens the Ctrlboard desktop window. To build the frontend s
 
 Some controls depend on tools provided by the desktop or audio session. Ctrlboard checks for PipeWire's `wpctl` and PulseAudio-compatible `pactl` for audio controls. Media playback buttons use `playerctl` (MPRIS). Install these with your distribution's package manager if you want those features and the commands are missing.
 
+### Game FPS with MangoHud
+
+The FPS gauge is optional and disabled by default. Enable it in **Settings → Gauges**; Ctrlboard creates the MangoHud log folder automatically. Install MangoHud if needed (`sudo dnf install mangohud` on Fedora or `sudo apt install mangohud` on Debian/Ubuntu), then copy the launch option shown under the FPS setting into the Steam game's **Properties → General → Launch Options**. The option runs MangoHud invisibly and starts FPS logging automatically for that game. Only games launched with the option provide readings. Flatpak Steam also needs MangoHud and permission to write to the configured log folder.
+
 On GNOME, selecting keyboard layouts requires the included Shell bridge. Install it for your user with:
 
 ```sh
